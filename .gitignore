@@ -1,0 +1,24 @@
+# dependencies
+node_modules/
+
+# turbo / build output
+.turbo/
+dist/
+.next/
+*.tsbuildinfo
+
+# env and secrets
+.env
+.env.*
+!.env.example
+
+# PRIVACY: raw chats, the name map, and review exports must never be committed.
+# Keep the empty folder layout; ignore everything else under data/.
+data/**
+!data/**/
+!data/**/.gitkeep
+
+# logs and misc
+*.log
+coverage/
+.DS_Store
