@@ -1,20 +1,6 @@
+# Postgres is the hosted Supabase project (DATABASE_URL). This file is Redis only.
 services:
-  postgres:
-    image: pgvector/pgvector:pg17
-    environment:
-      POSTGRES_USER: hec
-      POSTGRES_PASSWORD: hec
-      POSTGRES_DB: hec
-    ports:
-      - "5432:5432"
-    volumes:
-      # Named Docker volume. Raw chats stay in ./data (gitignored), never mounted here.
-      - hec_pg:/var/lib/postgresql/data
-
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
-
-volumes:
-  hec_pg:
