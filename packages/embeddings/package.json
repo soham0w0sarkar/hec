@@ -1,0 +1,19 @@
+{
+  "name": "@hec/embeddings",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hec/core": "workspace:*",
+    "@hec/llm": "workspace:*"
+  },
+  "devDependencies": {
+    "@hec/config": "workspace:*"
+  }
+}

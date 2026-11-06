@@ -1,0 +1,21 @@
+{
+  "name": "@hec/agent",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hec/core": "workspace:*",
+    "@hec/llm": "workspace:*",
+    "@hec/persona": "workspace:*",
+    "@hec/retrieval": "workspace:*"
+  },
+  "devDependencies": {
+    "@hec/config": "workspace:*"
+  }
+}

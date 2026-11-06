@@ -1,0 +1,23 @@
+{
+  "name": "@hec/worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "start": "bun src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hec/core": "workspace:*",
+    "@hec/db": "workspace:*",
+    "@hec/embeddings": "workspace:*",
+    "@hec/extraction": "workspace:*",
+    "@hec/ingest": "workspace:*",
+    "@hec/queue": "workspace:*",
+    "@hec/sessionizer": "workspace:*"
+  },
+  "devDependencies": {
+    "@hec/config": "workspace:*"
+  }
+}

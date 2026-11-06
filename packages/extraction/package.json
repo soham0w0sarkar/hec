@@ -1,0 +1,20 @@
+{
+  "name": "@hec/extraction",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hec/core": "workspace:*",
+    "@hec/db": "workspace:*",
+    "@hec/llm": "workspace:*"
+  },
+  "devDependencies": {
+    "@hec/config": "workspace:*"
+  }
+}
