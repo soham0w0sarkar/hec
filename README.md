@@ -28,7 +28,7 @@ data/raw/instagram/   -> instagram adapter -+
 data/raw/whatsapp/    -> whatsapp adapter  --+
         |
         v
-   identity map (export name -> person_1 | person_2)
+   source_identities (raw name -> person id)
         |
         v
    dedupe, sort by time, sanity-check dates
@@ -74,7 +74,7 @@ The cheeky romance-novel-geek voice lives in its own package and only affects ho
 
 - **TypeScript + Node.js**
 - **Turborepo** monorepo
-- **Postgres + pgvector:** messages, sessions, events, stats, meaning search, and full-text keyword search in one database
+- **Postgres + pgvector:** hosted on Supabase. Messages, sessions, events, stats, meaning search, and full-text keyword search in one database
 - **Redis + BullMQ:** pipeline jobs, caching (searches and embeddings), short-term chat memory
 
 ---
@@ -89,7 +89,7 @@ hec/
 │   └── web/            chat page + timeline page
 │
 ├── packages/
-│   ├── core/           shared types (Message, Session, Event). Message carries source.
+│   ├── core/           shared types (Message, Session, Event, Chunk)
 │   ├── db/             Postgres client, migrations, queries
 │   ├── ingest/         one adapter per source, then one normalized stream
 │   │   └── src/adapters/
@@ -109,16 +109,16 @@ hec/
 │   ├── raw/
 │   │   ├── instagram/  message_1.json ... message_N.json
 │   │   └── whatsapp/   WhatsApp chat export (.txt)
-│   ├── ingest.json     name map, timezone, optional WhatsApp date hint
+│   ├── ingest.json     raw export names -> person id, optional WhatsApp date hint
 │   └── review/         events exported for manual review
 │
 ├── evals/              known-answer questions + runner
-├── docker-compose.yml  postgres (pgvector) + redis
+├── docker-compose.yml  redis (Postgres is hosted Supabase)
 ├── turbo.json
 └── .env.example
 ```
 
-Adapters stay inside `ingest`. There is no per-app package. Adding another source is a new folder under `src/adapters/` and an entry in `data/ingest.json`.
+Adapters stay inside `ingest`. There is no per-app package. Adding another source is a new folder under `src/adapters/`, a value on the `message_source` enum, and an entry in `data/ingest.json`.
 
 ### Design rules
 
@@ -132,22 +132,19 @@ Adapters stay inside `ingest`. There is no per-app package. Adding another sourc
 
 ## Normalized message
 
-Both adapters return the same object. `source` is a tag, not a fork.
+Both adapters return the same object. `source` is a tag, not a fork. Ingest resolves `senderRaw` through `source_identities` and stores `person_id`.
 
 | Field | Required | Meaning |
 | --- | --- | --- |
-| `who` | yes | `person_1` or `person_2`, after the identity map |
 | `senderRaw` | yes | the name as that export wrote it |
-| `sentAt` | yes | UTC. Instagram gives UTC milliseconds. WhatsApp gives local time with no zone; read it as `Asia/Kolkata`, then store UTC |
+| `sentAt` | yes | UTC. Instagram gives UTC milliseconds. WhatsApp gives local time with no zone; read it as the display timezone (`Asia/Kolkata`), then store UTC |
 | `text` | yes | message body. A WhatsApp media line with no caption stays as its short placeholder (`media omitted`) |
 | `source` | yes | `instagram` or `whatsapp` |
-| `originalRef` | yes | pointer back into the export. The message id is `{source}:{originalRef}`, so the two apps can never collide |
-| `kind` | yes | `message`, `call`, `media`, or `system` |
-| `reactions` | no | Instagram only. Absent on WhatsApp |
-| `share` | no | Instagram only (shared posts, reels). Absent on WhatsApp |
-| `call` | no | voice or video, missed or not, when the export says so |
+| `sourceRef` | yes | stable id from the file and position. Instagram: `<file>:<message id>`. WhatsApp: `<file>:<first line>-<last line>` |
+| `kind` | yes | `text`, `media`, `call`, `share`, `system`, or `unsent` |
+| `extras` | no | reactions, shared-link info, call duration, media type. Shape differs per source |
 
-`kind: system` is stored and then left out of sessions, search, and event extraction. That covers lines like "messages are end-to-end encrypted" and "X changed their number".
+`system` lines (encryption notices, number changes) are stored and left out of sessions, search, stats, and event extraction.
 
 ### Why WhatsApp is its own adapter
 
@@ -158,33 +155,14 @@ Instagram's export is JSON: one object per message, a stable id, UTC millisecond
 - The date format follows the phone's region: day/month or month/day, 12-hour or 24-hour. The adapter detects which, or uses an explicit hint in `data/ingest.json` when detection is ambiguous.
 - There are no reactions. Media is the text `media omitted`. Calls are short text lines and become `kind: call`.
 
-### Messages table
-
-| Column | Notes |
-| --- | --- |
-| `id` | primary key, `{source}:{originalRef}` |
-| `source` | `instagram` or `whatsapp` |
-| `original_ref` | Instagram's message id, or for WhatsApp the file name plus the line range of that message |
-| `sender` | `person_1` or `person_2` |
-| `sender_raw` | display name from that export |
-| `sent_at` | `timestamptz`, always UTC |
-| `text` | |
-| `kind` | `message`, `call`, `media`, or `system` |
-| `reactions` | jsonb, null when the source has none |
-| `share` | jsonb, null when absent |
-| `call` | jsonb, null when it is not a call |
-
-Sessions are built after the merge. A new session starts after a few hours of silence on that one timeline, so a conversation that starts on Instagram and continues on WhatsApp stays one session. Splitting by app would cut it in half.
-
-An event's evidence is a list of message ids. The id already names the app, so one milestone can cite both sources, and "first I love you" means the earliest line in either export.
-
 ### Identity map
 
-Names differ per app: a handle on Instagram, a contact name on WhatsApp, and sometimes `You` for your own lines. `data/ingest.json` maps each of those strings to `person_1` or `person_2`. Anything unmapped fails ingest instead of being guessed.
+`people` has two rows, one per person id (`person_1`, `person_2`). Their display names are not in the repo: `PEOPLE_DISPLAY_NAMES` in `.env` holds them as JSON, and `bun run db:migrate` writes them into `people`. `source_identities` maps each app's raw name to one person id, so the parsers never hardcode a name. The lookup is case-sensitive. Anything unmapped fails ingest.
+
+`data/ingest.json` is how those rows get loaded:
 
 ```json
 {
-  "timezone": "Asia/Kolkata",
   "identity": {
     "instagram": {
       "<person_2's Instagram name>": "person_2",
@@ -202,17 +180,89 @@ Names differ per app: a handle on Instagram, a contact name on WhatsApp, and som
 }
 ```
 
-Leave `dateOrder` and `hourClock` out to let the adapter detect them. Set them when you know the phone's region. `hourClock` is `12`, `24`, or `auto`.
+The values are person ids (`person_1`, `person_2`), not display names. Leave `dateOrder` and `hourClock` out to let the adapter detect them. `hourClock` is `12`, `24`, or `auto`.
+
+Times are stored in UTC. The display timezone lives in `app_settings` (seeded to `Asia/Kolkata`), not in this file. Calendar days, including streaks, use that zone. Changing it means refreshing `daily_stats`.
 
 ### Checks inside ingest
 
-After both adapters have run, ingest does three things before anything is written:
+Each file is checked before any of its rows are written:
 
-1. **Dedupe.** Same sender, same text, timestamps a few minutes apart: keep the earlier one. Overlap across two different apps is unlikely, and the check is cheap.
-2. **Order.** Within each export file, timestamps must be non-decreasing. A backwards jump means the date format was read wrong.
+1. **Dedupe.** Same person, same text, from the other app, within 5 minutes: the incoming copy is skipped. Repeats inside one app are kept, because a burst of photos really is several "image omitted" lines. Files are ingested in no fixed order and stored messages are never deleted, so the copy stored first wins.
+2. **Order.** In a WhatsApp file, a jump back of more than a day means the date format was read wrong. A shorter inversion is kept and printed as a warning, since the export itself sometimes writes a line out of order.
 3. **Future.** No message may land after the time ingest runs. A future timestamp means the same thing.
 
-If any of these fail, ingest stops. A wrong day/month guess would otherwise shift the whole timeline with no error.
+A failed check fails that file and nothing from it is stored. A wrong day/month guess would otherwise shift the whole timeline with no error. `(source, source_ref)` is unique, so a re-run inserts nothing it already stored.
+
+### Parallel workers
+
+`bun run ingest` runs 4 workers by default. Change it with `INGEST_WORKERS=8 bun run ingest`, or with `--workers 8` when running the package script directly. Each worker takes the next file and handles it in one transaction:
+
+1. Take a Postgres advisory lock on the file's source and content hash. If another worker or process holds it, move on.
+2. Skip the file if `ingest_runs` already has it as succeeded.
+3. Parse, check, dedupe, insert the messages, and write the `ingest_runs` row.
+
+The lock lasts until that transaction ends, so a crash rolls back the file and releases the lock. Nothing is left half-written or stuck as running. The lock works across processes too, so starting `bun run ingest` twice is safe.
+
+Instagram files run side by side. The WhatsApp file waits until no Instagram file is mid-insert, and Instagram files wait for it. The duplicate check only sees committed rows, so two apps inserting at once could each miss the other's copy.
+
+---
+
+## Database
+
+The migration is `packages/db/migrations/0001_schema.sql`. Apply it with `bun run db:migrate`. Messages are the source of truth and are never edited or deleted. `session_id` is the exception: sessions are derived, so that column is filled in and cleared when they are rebuilt. Everything else can be dropped and built again from messages.
+
+### `messages`
+
+| Column | Notes |
+| --- | --- |
+| `person_id` | `person_1` or `person_2` |
+| `sent_at` | `timestamptz`, UTC |
+| `text` | |
+| `source` | `instagram` or `whatsapp` |
+| `source_ref` | file and position, unique together with `source` |
+| `kind` | `text`, `media`, `call`, `share`, `system`, `unsent` |
+| `extras` | jsonb. Empty object when the source has nothing extra |
+| `session_id` | set when sessions are built |
+
+### `sessions` and `chunks`
+
+A session is one stretch of the merged timeline: start, end, message count, and which sources it contains. A few hours of silence starts a new one, so a conversation that moves from Instagram to WhatsApp stays one session.
+
+`bun run sessionize` groups every message in one pass. The pass stays single-threaded, because a session boundary depends on the message before it. The writes are batched: every session row goes in with one statement, then workers set `session_id`. The default is 4 workers. Change it with `SESSION_WORKERS=8 bun run sessionize`, or with `--workers 8` when running the package script directly. Each worker takes a distinct slice of message ids and locks that slice for its transaction, so two writers never update the same rows. One more lock covers the whole rebuild. A second `sessionize` started while the first is still going stops instead of wiping the sessions the first one just wrote. A crash can leave some messages unassigned. The next run deletes every session and fills them in again.
+
+Chunks are what gets embedded. A long session is split into size-capped pieces with a little overlap. Each chunk stores its first and last message, a transcript with timestamps and names, the embedding, and the embedding model name. The vector is 1536 dimensions so an HNSW index fits. A new model of that width is a re-embed. A different width needs a new migration.
+
+`first_message_id` and `last_message_id` are the earliest and latest message by time. They are not an id interval. A file ingested later can give an earlier message a higher id.
+
+### `events` and `event_evidence`
+
+An event has a title, a one-line summary, a category, `occurred_at`, and a date precision: `exact_day`, `month`, or `approximate`. Status is `draft`, `approved`, `edited`, or `rejected`. The timeline page reads `approved` and `edited` only.
+
+Each event points at the extraction run that created it (model and prompt version), so a re-run does not mix with the previous pass. `event_evidence` links the event to the messages that prove it, each `primary` or `supporting`. Joining that to `messages` shows which app the proof came from.
+
+### `daily_stats` and `ingest_runs`
+
+`daily_stats` is a materialized view: per day, per person, per source, the message count, the first message time, and the call count. System and unsent lines are excluded. Streaks and busiest days are computed from it. Refresh it after each ingest with `refresh_daily_stats()`. The day boundary follows `app_settings.display_timezone`.
+
+`ingest_runs` is one row per file attempt (source, file hash, row counts, status), written when the attempt ends. A file that already succeeded is not inserted again; a failed one is retried on the next run.
+
+### Indexes
+
+- Full-text search on messages uses the `simple` config, not `english`. The English config throws away "I" and "you", which breaks "I love you". Hinglish does not stem usefully either.
+- A trigram index (`pg_trgm`) on message text matches typos and variants ("luv u", "lub u").
+- HNSW index, cosine distance, on chunk embeddings.
+- B-tree indexes on `sent_at` and on `(person_id, sent_at)`. "First" and "last" are time-ordered scans. Calls have their own partial index.
+
+### Which table answers which question
+
+| Question | Reads from |
+| --- | --- |
+| "Who said X first?" | messages (full-text or trigram, sorted by time) |
+| "What did we say about Goa?" | chunks (vector), then messages for the surrounding lines |
+| "When did we first call?" | messages (`kind = call`) |
+| "Busiest day / streak?" | daily_stats |
+| Timeline page | events + event_evidence, status approved or edited |
 
 ---
 
@@ -221,11 +271,12 @@ If any of these fail, ingest stops. A wrong day/month guess would otherwise shif
 1. Export Instagram as JSON and put every `message_N.json` in `data/raw/instagram/`.
 2. Export the WhatsApp chat as a `.txt` file (without media is fine) and put it in `data/raw/whatsapp/`.
 3. Write `data/ingest.json` from the shape above. WhatsApp often starts earlier than the Instagram export; that is expected, and it is why event extraction waits until both are merged.
-4. Copy `.env.example` to `.env` and fill in keys.
-5. Start Postgres and Redis with Docker Compose.
-6. Run the pipeline: ingest, sessionize, embed, extract.
-7. Review the extracted events in `data/review/`, fix anything wrong.
-8. Start the API and web app.
+4. Copy `.env.example` to `.env` and fill in keys, including `PEOPLE_DISPLAY_NAMES`.
+5. Start Redis with Docker Compose. The database is the hosted Supabase project in `DATABASE_URL`.
+6. Apply the schema and write the display names: `bun run db:migrate`.
+7. Run the pipeline: `bun run ingest`, `bun run sessionize`, then embed and extract.
+8. Review the extracted events in `data/review/`, fix anything wrong.
+9. Start the API and web app.
 
 ---
 
@@ -246,7 +297,7 @@ If any of these fail, ingest stops. A wrong day/month guess would otherwise shif
 
 ## Build order
 
-1. Both adapters, the messages table, and keyword search on the merged timeline
+1. Both adapters and keyword search on messages
 2. Bare chat with tools, tested against evals
 3. Sessions + meaning search
 4. Event extraction + review + timeline page
