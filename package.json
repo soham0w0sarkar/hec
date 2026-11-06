@@ -12,6 +12,9 @@
     "dev": "turbo run dev",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
+    "db:migrate": "bun --filter @hec/db migrate",
+    "ingest": "bun --filter @hec/ingest ingest",
+    "sessionize": "bun --filter @hec/sessionizer sessionize",
     "test": "turbo run test",
     "clean": "turbo run clean"
   },
