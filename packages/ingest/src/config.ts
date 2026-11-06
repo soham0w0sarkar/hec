@@ -18,7 +18,7 @@ export async function loadIngestConfig(path: string): Promise<IngestConfig> {
   try {
     raw = await readFile(path, "utf8");
   } catch {
-    throw new IngestError(`Missing ${path}. Map each export name to person_1 or person_2.`);
+    throw new IngestError(`Missing ${path}. Map each export name to ${PERSON_IDS.join(" or ")}.`);
   }
 
   let parsed: unknown;
@@ -51,7 +51,7 @@ function names(value: unknown, source: MessageSource): Record<string, PersonId> 
   for (const [rawName, personId] of Object.entries(value)) {
     if (rawName.trim() === "") throw new IngestError(`identity.${source} has an empty name`);
     if (typeof personId !== "string" || !PERSON_ID_SET.has(personId)) {
-      throw new IngestError(`identity.${source}.${rawName} must be person_1 or person_2`);
+      throw new IngestError(`identity.${source}.${rawName} must be ${PERSON_IDS.join(" or ")}`);
     }
     mapped[rawName] = personId as PersonId;
   }
