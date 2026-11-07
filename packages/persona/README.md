@@ -1,6 +1,6 @@
 # @hec/persona
 
-Turns an `AnswerPayload` into the chat message. It can reword. It cannot add, drop, or change a fact. It never sees tool results.
+Turns an `AnswerPayload` into the chat message. The model writes a short voice lead; dates, quotes, and message ids are appended in code. It cannot add, drop, or change a fact. It never sees tool results.
 
 ## Voices
 
@@ -10,7 +10,7 @@ Turns an `AnswerPayload` into the chat message. It can reword. It cannot add, dr
 
 ## Checks
 
-`validateRender` is code, not a model. It rejects a date or number that is not in the payload, a quotation that is not a payload quote, a missing caveat, a missing date or quote or message id, a `not_found` that grows a consolation, and an `ambiguous` verdict written as if it were settled.
+`validateLead` checks the model lead. `validateRender` checks the full spoken reply (lead plus receipts). Together they reject a date or number that is not in the payload, a quotation that is not a payload quote, a missing caveat, a missing date or quote or message id, a `not_found` that grows a consolation, and an `ambiguous` verdict written as if it were settled.
 
 When `payload.sensitivity` is `heavy`, every persona is in soft mode. Jokes, innuendo, and teasing fail the check even if the quote itself contains those words. The quote is removed before that word list runs, so a real message is not punished for its own wording.
 

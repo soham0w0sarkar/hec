@@ -14,7 +14,7 @@ export type FactCheck = {
   verdict: Verdict | null;
 };
 
-/** Reasons the render is not allowed. Empty means it passed. No model is involved. */
+/** Reasons the full spoken reply is not allowed. Empty means it passed. No model is involved. */
 export function validateRender(text: string, payload: AnswerPayload): string[] {
   const reasons: string[] = [];
   const allowedDates = dateSet(payload);
@@ -44,7 +44,36 @@ export function validateRender(text: string, payload: AnswerPayload): string[] {
   if (payload.sensitivity === "heavy" && SOFT_BAN.test(withoutPayloadQuotes(text, payload))) {
     reasons.push("soft mode forbids jokes and innuendo");
   }
-  if (text.length > 2000) reasons.push("reply is too long");
+  if (text.length > 4000) reasons.push("reply is too long");
+  return reasons;
+}
+
+/**
+ * Checks only the model lead. Receipts are appended in code, so the lead must not invent
+ * dates, numbers, or quotes, and must keep the verdict honest. It does not need to list claims.
+ */
+export function validateLead(text: string, payload: AnswerPayload): string[] {
+  const reasons: string[] = [];
+  const allowedDates = dateSet(payload);
+  const allowedQuotes = new Set(payload.claims.flatMap((claim) => (claim.quote ? [claim.quote] : [])));
+  const allowedNumbers = numberSet(payload);
+  for (const date of text.match(DATE) ?? []) {
+    if (!allowedDates.has(date)) reasons.push(`date ${date} is not in the payload`);
+  }
+  for (const span of quotedSpans(text)) {
+    if (!allowedQuotes.has(span)) reasons.push("quoted text is not a payload quote");
+  }
+  for (const value of numberTokens(text)) {
+    if (!allowedNumbers.has(value)) reasons.push(`number ${value} is not in the payload`);
+  }
+  reasons.push(...verdictReasons(text, payload));
+  if (payload.sensitivity === "heavy" && SOFT_BAN.test(withoutPayloadQuotes(text, payload))) {
+    reasons.push("soft mode forbids jokes and innuendo");
+  }
+  if (/<\/?(?:payload|start_of_lead|end_of_lead|lead)\b/i.test(text)) {
+    reasons.push("lead leaked prompt tags");
+  }
+  if (text.length > 900) reasons.push("lead is too long");
   return reasons;
 }
 

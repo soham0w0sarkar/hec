@@ -73,8 +73,8 @@ describe("render", () => {
       expect(source).not.toContain("executeTool");
     }
 
-    const romance = speaking(() => `The archives are glowing, and it is still ambiguous.\n${neutralText(body)}`);
-    const wild = speaking(() => `UNHINGED BUT FAITHFUL, and it is ambiguous.\n${neutralText(body)}`);
+    const romance = speaking(() => "The archives are glowing, and it is still ambiguous.");
+    const wild = speaking(() => "UNHINGED BUT FAITHFUL, and it is ambiguous.");
     const plain = await render(body, "neutral");
     const geek = await render(body, "romance_geek", { model: romance });
     const loud = await render(body, extreme, { model: wild });
@@ -83,6 +83,9 @@ describe("render", () => {
     expect(wild.calls).toBe(1);
     expect(geek.text).not.toBe(plain.text);
     expect(loud.text).not.toBe(geek.text);
+    expect(geek.text).toContain("archives are glowing");
+    expect(geek.text).toContain("hello there");
+    expect(geek.text).toContain("(#7)");
     expect(extractFacts(geek.text, body)).toEqual(extractFacts(plain.text, body));
     expect(extractFacts(loud.text, body)).toEqual(extractFacts(plain.text, body));
     expect(geek.facts.verdict).toBe("ambiguous");
@@ -131,11 +134,12 @@ describe("render", () => {
     let n = 0;
     const model = speaking(() => {
       n += 1;
-      return n === 1 ? "definitely on 1999-01-01" : `Still ambiguous.\n${neutralText(body)}`;
+      return n === 1 ? "definitely on 1999-01-01" : "Still ambiguous.";
     });
     const rendered = await render(body, extreme, { model });
     expect(model.calls).toBe(2);
     expect(rendered.text).toContain("Still ambiguous");
+    expect(rendered.text).toContain("hello there");
     expect(rendered.text).not.toContain("1999");
   });
 
@@ -143,6 +147,6 @@ describe("render", () => {
     const text = loadPersonaPrompt();
     expect(text.startsWith("You are HEC's narrator:")).toBe(true);
     expect(text).toContain("SOFT MODE (when payload.sensitivity is \"heavy\")");
-    expect(text).toContain("You only reword the AnswerPayload.");
+    expect(text).toContain("You write a short voice lead only.");
   });
 });

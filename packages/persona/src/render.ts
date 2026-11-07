@@ -2,7 +2,8 @@ import { AnswerPayloadSchema, type AnswerPayload } from "@hec/core";
 import { ZERO_USAGE, type ChatModel, type Usage } from "@hec/llm";
 import { neutralText } from "./neutral";
 import { loadPersonaPrompt } from "./prompt";
-import { extractFacts, validateRender, type FactCheck } from "./validate";
+import { composeSpoken } from "./receipts";
+import { extractFacts, validateLead, validateRender, type FactCheck } from "./validate";
 
 export type Persona = {
   id: string;
@@ -31,8 +32,8 @@ export function personaByName(name: string): Persona {
 }
 
 /**
- * Rewords a payload. The model sees the payload and not the tools or the search results.
- * A render that fails the fact check is retried once with the reasons, then replaced by the neutral text.
+ * Rewords a payload. The model writes a short voice lead only; receipts are appended in code.
+ * A lead that fails the fact check is retried once with the reasons, then replaced by the neutral text.
  * Heavy sensitivity uses soft mode for every persona.
  */
 export async function render(
@@ -48,12 +49,35 @@ export async function render(
   const model = options.model;
   if (!model) throw new Error(`persona ${voice.id} needs a model`);
   const first = await ask(model, voice, checked, null);
-  if (validateRender(first.text, checked).length === 0) return pack(first.text, checked, first.usage);
+  const firstLead = cleanLead(first.text);
+  const firstSpoken = composeSpoken(firstLead, checked);
+  if (leadOk(firstLead, checked) && validateRender(firstSpoken, checked).length === 0) {
+    return pack(firstSpoken, checked, first.usage);
+  }
 
-  const second = await ask(model, voice, checked, validateRender(first.text, checked));
+  const second = await ask(model, voice, checked, [
+    ...validateLead(firstLead, checked),
+    ...validateRender(firstSpoken, checked),
+  ]);
   const usage = add(first.usage, second.usage);
-  if (validateRender(second.text, checked).length === 0) return pack(second.text, checked, usage);
+  const secondLead = cleanLead(second.text);
+  const secondSpoken = composeSpoken(secondLead, checked);
+  if (leadOk(secondLead, checked) && validateRender(secondSpoken, checked).length === 0) {
+    return pack(secondSpoken, checked, usage);
+  }
   return pack(plain, checked, usage);
+}
+
+function leadOk(lead: string, payload: AnswerPayload): boolean {
+  return validateLead(lead, payload).length === 0;
+}
+
+/** Drops leaked prompt tags some models echo into the lead. */
+export function cleanLead(text: string): string {
+  return text
+    .replace(/<\/?(?:start_of_lead|end_of_lead|payload|lead)\b[^>]*>/gi, "")
+    .replace(/^\s*["'`]+|["'`]+\s*$/g, "")
+    .trim();
 }
 
 async function ask(
@@ -65,10 +89,11 @@ async function ask(
   const soft = payload.sensitivity === "heavy" ? "SOFT MODE is on. No jokes, no innuendo, no teasing." : "";
   const retry = failures ? `The previous reply failed these checks: ${failures.slice(0, 8).join("; ")}. Fix only that.` : "";
   const user = [
-    "Reword the payload in your voice. Keep every date, quote, caveat, and message id exactly.",
-    "Write each message id as (#id). Do not add dates, numbers, quotes, names, or events.",
-    "The reply must contain the verdict value: found, not_found, ambiguous, or partial.",
-    "Use quotation marks only around a payload quote.",
+    "Write a short voice lead only (2-5 sentences). The program appends the dates, quotes, and message ids after you.",
+    "Include the verdict value in the lead: found, not_found, ambiguous, or partial.",
+    "Do not invent dates, numbers, names, quotes, or events. Prefer no digits at all in the lead.",
+    "Plain text only. Do not wrap the lead in tags, XML, markdown fences, or the word payload.",
+    "Use quotation marks only around a payload quote you copy exactly.",
     soft,
     retry,
     "<payload>",
@@ -81,7 +106,7 @@ async function ask(
     system: persona.system ?? "",
     user,
     temperature: payload.sensitivity === "heavy" ? 0.2 : 0.7,
-    maxTokens: 600,
+    maxTokens: 280,
   });
   return { text: reply.text.trim(), usage: reply.usage };
 }
