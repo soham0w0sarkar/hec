@@ -26,6 +26,8 @@ export type EventListQuery = {
   limit?: number;
   /** Opaque cursor from the previous page. */
   after?: string;
+  /** Only events the reviewer put on the timeline. Chat leaves this off and sees every approved event. */
+  onTimelineOnly?: boolean;
 };
 
 export type EventHit = {
@@ -59,6 +61,7 @@ type PreparedEvents = {
   until: Date | null;
   limit: number;
   after: { occurredAt: Date; id: number } | null;
+  onTimelineOnly: boolean;
 };
 
 type EventRow = {
@@ -123,6 +126,7 @@ export function prepareEventList(query: EventListQuery): PreparedEvents {
     until,
     limit,
     after: query.after === undefined ? null : parseEventCursor(query.after),
+    onTimelineOnly: query.onTimelineOnly === true,
   };
 }
 
@@ -152,6 +156,7 @@ export function eventStatement(query: PreparedEvents): { sql: string; params: un
         $4::timestamptz is null
         or (e.occurred_at, e.id) > ($4::timestamptz, $5::bigint)
       )
+      and ($7::boolean = false or e.on_timeline)
     order by e.occurred_at asc, e.id asc
     limit $6`;
   return {
@@ -163,6 +168,7 @@ export function eventStatement(query: PreparedEvents): { sql: string; params: un
       query.after?.occurredAt.toISOString() ?? null,
       query.after?.id ?? null,
       query.limit + 1,
+      query.onTimelineOnly,
     ],
   };
 }
