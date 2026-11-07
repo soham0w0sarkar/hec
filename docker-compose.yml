@@ -1,6 +1,114 @@
-# Postgres is the hosted Supabase project (DATABASE_URL). This file is Redis only.
+# One-box deployment: Postgres (pgvector), Redis, migrations, API, worker, and web.
+# `docker compose up -d --build` starts everything. Secrets and model keys come from .env.
+x-app-env: &app-env
+  DATABASE_URL: postgresql://${POSTGRES_USER:-hec}:${POSTGRES_PASSWORD:-hec}@postgres:5432/${POSTGRES_DB:-hec}
+  REDIS_URL: redis://redis:6379
+  PG_TLS: "off"
+
 services:
+  postgres:
+    image: pgvector/pgvector:pg18
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-hec}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hec}
+      POSTGRES_DB: ${POSTGRES_DB:-hec}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-hec} -d ${POSTGRES_DB:-hec}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
   redis:
     image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+
+  migrate:
+    build:
+      context: .
+      target: api
+    command: ["bun", "packages/db/src/migrate.ts"]
+    env_file: .env
+    environment: *app-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build:
+      context: .
+      target: api
+    env_file: .env
+    environment:
+      <<: *app-env
+      HOST: 0.0.0.0
+      PORT: "3001"
+    expose:
+      - "3001"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "bun",
+          "-e",
+          "fetch('http://127.0.0.1:3001/api/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      target: worker
+    env_file: .env
+    environment: *app-env
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      target: web
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./certbot/www:/var/www/certbot:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:

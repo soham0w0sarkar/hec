@@ -113,7 +113,7 @@ hec/
 │   └── review/         events exported for manual review
 │
 ├── evals/              known-answer questions + runner
-├── docker-compose.yml  not used. Redis and Postgres are both hosted (Redis Cloud, Supabase)
+├── docker-compose.yml  optional self-hosted Postgres (pgvector) + Redis, loopback-bound
 ├── turbo.json
 └── .env.example
 ```
@@ -321,7 +321,7 @@ The review file lists each event with its date, category, title, summary, the ev
 2. Export the WhatsApp chat as a `.txt` file (without media is fine) and put it in `data/raw/whatsapp/`.
 3. Write `data/ingest.json` from the shape above. WhatsApp often starts earlier than the Instagram export; that is expected, and it is why event extraction waits until both are merged.
 4. Copy `.env.example` to `.env` and fill in keys, including `PEOPLE_DISPLAY_NAMES`.
-5. Set `DATABASE_URL` (hosted Supabase) and `REDIS_URL` (Redis Cloud, `redis://` or `rediss://`) in `.env`. Nothing runs locally.
+5. Set `DATABASE_URL` and `REDIS_URL` in `.env`. Either point them at hosted Supabase/Redis Cloud, or run `docker compose up -d` for pgvector and Redis on the same box and use the self-hosted values commented in `.env.example`.
 6. Apply the schema and write the display names: `bun run db:migrate`.
 7. Run the pipeline: `bun run ingest`, `bun run sessionize`, then embed and extract (see below).
 8. Review the extracted events in `data/review/`, fix anything wrong.
