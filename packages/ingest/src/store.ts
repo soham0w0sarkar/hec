@@ -45,8 +45,7 @@ export async function tryLockFile(tx: SQL, source: MessageSource, fileHash: stri
 
 /**
  * The duplicate check only sees committed rows, so files from two different apps must not
- * check and insert at the same time. Files from the same app never dedupe against each other
- * and may overlap. For each pair of apps the first (by name) takes the lock shared and the
+ * check and insert at the same time. For each pair of apps the first (by name) takes the lock shared and the
  * second exclusive, always in the same key order, so the waits cannot deadlock.
  */
 export async function waitForOtherSources(tx: SQL, source: MessageSource): Promise<void> {
@@ -96,7 +95,7 @@ export async function recordRun(sql: SQL, run: RunRecord): Promise<void> {
   `;
 }
 
-/** Stored rows from the other apps that could duplicate `messages`. */
+/** Stored rows, from either app, that could duplicate `messages`. */
 export async function storedForDedupe(
   sql: SQL,
   messages: ResolvedMessage[],
@@ -116,8 +115,7 @@ export async function storedForDedupe(
   const rows = await sql<{ person_id: DedupeRow["personId"]; source: DedupeRow["source"]; text: string; sent_at: Date | string }[]>`
     select person_id, source, "text", sent_at
     from messages
-    where source <> ${source}
-      and sent_at between ${new Date(min - DEDUPE_WINDOW_MS)} and ${new Date(max + DEDUPE_WINDOW_MS)}
+    where sent_at between ${new Date(min - DEDUPE_WINDOW_MS)} and ${new Date(max + DEDUPE_WINDOW_MS)}
       and regexp_replace("text", '^[[:space:]]+|[[:space:]]+$', '', 'g')
           in (select jsonb_array_elements_text(${texts}::jsonb))
   `;

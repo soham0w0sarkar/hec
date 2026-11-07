@@ -1,8 +1,9 @@
 import type { MessageSource, PersonId } from "@hec/core";
 
 /**
- * Same person, same text, from the other app, within this window: the incoming copy is skipped.
- * Only another app counts; one app repeats a line on purpose ("image omitted" for a burst of photos).
+ * Same person, same text, within this window: the incoming copy is skipped.
+ * A second export of the same chat is the usual case. Repeats that are not already stored are kept,
+ * so a burst of "image omitted" inside one file still lands as several lines.
  * Files are ingested in no fixed order and stored messages are never deleted, so the copy stored first wins.
  */
 export const DEDUPE_WINDOW_MS = 5 * 60 * 1000;
@@ -35,9 +36,7 @@ export function withoutDuplicates<T extends DedupeRow>(incoming: T[], stored: De
     const candidates = storedByKey.get(dedupeKey(message.personId, text));
     if (!candidates) return true;
     const sentAtMs = message.sentAt.getTime();
-    return !candidates.some(
-      (row) => row.source !== message.source && Math.abs(row.sentAtMs - sentAtMs) <= DEDUPE_WINDOW_MS,
-    );
+    return !candidates.some((row) => Math.abs(row.sentAtMs - sentAtMs) <= DEDUPE_WINDOW_MS);
   });
 }
 

@@ -17,9 +17,13 @@ function row(text: string, minute: number, source: MessageSource = "instagram", 
 }
 
 describe("withoutDuplicates", () => {
-  test("keeps repeated lines from the same app, including empty text", () => {
+  test("skips a copy already stored from the same app, and keeps empty text", () => {
     const incoming = [row("hello", 3), row("hello", 4), row("", 5), row("", 5)];
-    expect(withoutDuplicates(incoming, [row("hello", 2)])).toHaveLength(4);
+    expect(withoutDuplicates(incoming, [row("hello", 2)])).toHaveLength(2);
+  });
+
+  test("keeps a repeated line when nothing stored matches it", () => {
+    expect(withoutDuplicates([row("photo", 1), row("photo", 2)], [])).toHaveLength(2);
   });
 
   test("skips a copy the other app already stored, whichever is earlier", () => {

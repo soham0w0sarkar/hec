@@ -106,7 +106,9 @@ async function ingestFile(sql: SQL, file: ExportFile, context: FileContext): Pro
       const warnings = file.source === "whatsapp" ? smallReversals(parsed, file.fileName) : [];
       if (file.source === "whatsapp") assertNoLargeReversal(parsed, file.fileName);
       assertNotFuture(parsed, context.now, file.fileName);
-      const resolved = resolveSenders(parsed, context.config.identity[file.source], file.fileName);
+      // WhatsApp's encryption notice has a time and no sender. It is not a message from either person.
+      const addressed = parsed.filter((message) => message.senderRaw !== "" || message.kind !== "system");
+      const resolved = resolveSenders(addressed, context.config.identity[file.source], file.fileName);
 
       await waitForOtherSources(tx, file.source);
       const kept = withoutDuplicates(resolved, await storedForDedupe(tx, resolved, file.source));
