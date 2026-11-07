@@ -15,8 +15,15 @@
     "db:migrate": "bun --filter @hec/db migrate",
     "ingest": "bun --filter @hec/ingest ingest",
     "sessionize": "bun --filter @hec/sessionizer sessionize",
+    "search": "bun --filter @hec/retrieval search",
     "test": "turbo run test",
-    "clean": "turbo run clean"
+    "clean": "turbo run clean",
+    "worker": "bun --filter @hec/worker start",
+    "extract": "bun --filter @hec/extraction extract",
+    "review": "bun --env-file=.env packages/extraction/src/cli.ts review",
+    "review:export": "bun --env-file=.env packages/extraction/src/cli.ts review:export",
+    "review:import": "bun --env-file=.env packages/extraction/src/cli.ts review:import",
+    "evals": "bun --filter @hec/extraction evals"
   },
   "devDependencies": {
     "@types/bun": "^1.4.4",

@@ -113,7 +113,7 @@ hec/
 │   └── review/         events exported for manual review
 │
 ├── evals/              known-answer questions + runner
-├── docker-compose.yml  redis (Postgres is hosted Supabase)
+├── docker-compose.yml  not used. Redis and Postgres are both hosted (Redis Cloud, Supabase)
 ├── turbo.json
 └── .env.example
 ```
@@ -250,9 +250,17 @@ Each event points at the extraction run that created it (model and prompt versio
 ### Indexes
 
 - Full-text search on messages uses the `simple` config, not `english`. The English config throws away "I" and "you", which breaks "I love you". Hinglish does not stem usefully either.
-- A trigram index (`pg_trgm`) on message text matches typos and variants ("luv u", "lub u").
+- A trigram index (`pg_trgm`) on message text matches a longer word with a typo ("lovve" finds "love"). A three-letter swap such as "luv" and "love" shares too few characters and does not match.
 - HNSW index, cosine distance, on chunk embeddings.
 - B-tree indexes on `sent_at` and on `(person_id, sent_at)`. "First" and "last" are time-ordered scans. Calls have their own partial index.
+
+### Keyword search
+
+`searchMessages` in `@hec/retrieval` reads `messages` only. System and unsent lines are left out. Results are ordered by `sent_at`, so the first row is who said it first. `firstMessage` returns that row.
+
+Several words are matched as a phrase. If the phrase never occurs, the words are matched on their own. If that misses too, the trigram comparison above runs. The first comparison with any match is the one used, and `mode` says which.
+
+Every result set has a `total`, the number of messages that match, not only the page. Pages are 20 by default and at most 100. `next` is an opaque cursor for the following page, or null on the last page. The CLI prints the total and the command for the next page: `bun run search -- --limit 20 i love you`.
 
 ### Which table answers which question
 
@@ -266,15 +274,56 @@ Each event points at the extraction run that created it (model and prompt versio
 
 ---
 
+## Event extraction (`packages/extraction`)
+
+Extraction reads each session and writes draft timeline events with links to the messages that prove them. Nothing reaches the timeline until you approve it.
+
+**Passes.**
+
+1. **Per session.** Each session is shaped into a transcript with a ref per message (`[m123]`), IST time, the speaker's name from `people`, and the source. Long sessions are cut into windows that overlap by 15 messages. The model returns JSON (`prompts/extract.v1.md`). A reply that is not valid JSON, or does not match the schema, is retried with the problem described. Then code checks each event: the category must be one of the nine, every evidence ref must be a message in that session, a Saying's quote must be word for word in an evidence message from the named speaker, the date must fall inside the evidence, and an end must come after the start. A Life update may be dated one day before the messages that discuss it. Failed events are dropped and counted by reason, never logged with their text.
+2. **Merge.** The same event from overlapping windows, or from two neighbouring sessions, becomes one event with all its evidence.
+3. **Firsts.** Every `is_first` claim is searched across the whole history with the keyword search in `@hec/retrieval`. A claim survives only if the earliest match is in its own evidence (or within a day of it). Among verified claims of the same kind, only the earliest keeps the flag.
+
+Running jokes are not extracted yet. `running-jokes.ts` is a stub for the cross-session pass.
+
+**Commands.** Start the worker in one terminal, then queue a run from another.
+
+```
+bun run worker                              # BullMQ worker, keep it running
+bun run extract                             # new run over every session
+bun run extract -- --resume <run>           # queue the unfinished sessions of an open run
+bun run extract -- --resume <run> --session <id>   # re-run one session in an open run
+bun run review                              # approve or reject drafts, one event at a time
+bun run review -- --run <run>               # a specific run
+bun run review -- --status all              # include events already decided
+bun run review:export                       # writes data/review/run-<id>.md for the latest finished run
+bun run review:import -- data/review/run-<id>.md --dry-run
+bun run review:import -- data/review/run-<id>.md   # apply the edits
+```
+
+**Runs.** A run is one pass with one model and one prompt, recorded on `extraction_runs`. Session results are stored per run and only become events when every session is done. Finalize writes the run's events in one transaction and marks the run succeeded. A worker started with a different model or prompt refuses the run. A second `extract` makes a new run and leaves the first one's drafts alone. Old drafts are never deleted.
+
+**Review.** `bun run review` loads a finished run and shows one event at a time, oldest first, drafts only. Two fields matter: `status` and `timeline`. `a` sets `status: approved` so chat can use the event; `t` toggles `timeline: yes`/`no`; the timeline page only shows a row when it is approved (or edited) **and** `timeline: yes`. `r` rejects it, Enter skips, `p` goes back, a number jumps to that event id, `q` quits. Each decision is saved before the next prompt. If `data/review/run-<id>.md` already exists, the same `status:` and `timeline:` lines are updated there.
+
+The review file lists each event with its date, category, title, summary, the evidence messages, a `status:` line, and a `timeline: yes`/`no` line. Set `status:` to `approved`, `edited` or `rejected`. Change any editable line to edit the event (an approved event that you edit becomes `edited`). The evidence lines are read-only. Import refuses a malformed file outright. A bad value skips that one event and the rest still apply. Review files contain real message text, so they stay in `data/review/`, which git ignores. Editing a field is still done in the file; the terminal reviewer sets status and timeline.
+
+**Model.** Sarvam `sarvam-105b` through `POST /v1/chat/completions`, with reasoning turned off, because thinking tokens count against the output cap. Requests are retried on network errors, 429 and 5xx, but not on 400, 401 or 402. Cost is recorded per session in rupees (`cost_inr`) from the price table in `packages/llm`. Settings come from `.env`: `SARVAM_API_KEY`, `SARVAM_MODEL`. `EXTRACTION_CONCURRENCY` (default 2) sets how many sessions run at once.
+
+**Tests and evals.** `bun test` in `packages/extraction` covers the validators, merge, firsts, the job logic and the review import, against an in-memory store. `bun run evals` (at the root) checks ten synthetic fixtures in `evals/extraction/fixtures/`: a golden reply must pass every validator and score perfectly. `bun run evals -- --live` runs the real model on the same fixtures. The fixtures are invented and dated 2030 or later. The loader refuses any folder under `data/`.
+
+**Open.** Approved events from an earlier run still show on the timeline next to the new run's approved events. Reject the old ones before approving a new run. The SQL store has not been run against a live database yet. Migration `0003_extraction.sql` has to be applied first with `bun run db:migrate`.
+
+---
+
 ## Getting started (planned)
 
 1. Export Instagram as JSON and put every `message_N.json` in `data/raw/instagram/`.
 2. Export the WhatsApp chat as a `.txt` file (without media is fine) and put it in `data/raw/whatsapp/`.
 3. Write `data/ingest.json` from the shape above. WhatsApp often starts earlier than the Instagram export; that is expected, and it is why event extraction waits until both are merged.
 4. Copy `.env.example` to `.env` and fill in keys, including `PEOPLE_DISPLAY_NAMES`.
-5. Start Redis with Docker Compose. The database is the hosted Supabase project in `DATABASE_URL`.
+5. Set `DATABASE_URL` (hosted Supabase) and `REDIS_URL` (Redis Cloud, `redis://` or `rediss://`) in `.env`. Nothing runs locally.
 6. Apply the schema and write the display names: `bun run db:migrate`.
-7. Run the pipeline: `bun run ingest`, `bun run sessionize`, then embed and extract.
+7. Run the pipeline: `bun run ingest`, `bun run sessionize`, then embed and extract (see below).
 8. Review the extracted events in `data/review/`, fix anything wrong.
 9. Start the API and web app.
 
