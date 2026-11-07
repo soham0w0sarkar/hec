@@ -9,7 +9,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "bun test",
-    "evals": "bun ../../evals/persona/run.ts"
+    "evals": "bun src/eval-run.ts"
   },
   "dependencies": {
     "@hec/core": "workspace:*",

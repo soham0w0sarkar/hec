@@ -1,0 +1,34 @@
+{
+  "synthetic": true,
+  "note": "Invented payload. No export text.",
+  "payload": {
+    "version": 1,
+    "question_type": "first_last",
+    "verdict": "ambiguous",
+    "interpretation_note": "Two messages are close, so this does not pick a single first.",
+    "claims": [
+      {
+        "text": "Ravi sent a matching message.",
+        "message_ids": [7],
+        "date": "2030-06-01",
+        "person": "Ravi",
+        "source": "instagram",
+        "quote": "hello there",
+        "basis": "messages"
+      },
+      {
+        "text": "Anita sent a matching message.",
+        "message_ids": [8],
+        "date": "2030-06-01",
+        "person": "Anita",
+        "source": "whatsapp",
+        "quote": "hello you",
+        "basis": "messages"
+      }
+    ],
+    "searched": { "tools": ["find_first"], "variants": ["hello"], "date_ranges": [] },
+    "caveats": ["The top two matches are 20 minutes apart, so neither one is clearly first."],
+    "confidence": "ambiguous",
+    "sensitivity": "none"
+  }
+}

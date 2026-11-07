@@ -33,4 +33,6 @@ The logger receives a run id, tool name, result count, token counts, cost, and t
 
 ## Tests
 
-`bun test` in this package uses fakes. It does not open a database and it does not read `data/`.
+`bun test` in this package uses fakes. It does not open a database and it does not read export files.
+
+`bun run evals` answers the synthetic cases in `evals/agent` against the local retrieval test database (`RETRIEVAL_TEST_DATABASE_URL`). The planner stands in for the model: it chooses a tool, then copies ids and text out of the tool result. The same payload is rendered in three voices. A conflict question stays heavy, and a planted instruction does not become the answer.

@@ -1,0 +1,9 @@
+{
+  "name": "@hec/evals",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "agent": "bun run --cwd ../packages/agent evals",
+    "persona": "bun run --cwd ../packages/persona evals"
+  }
+}

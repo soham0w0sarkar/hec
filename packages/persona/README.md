@@ -18,4 +18,6 @@ A failure is sent back once. A second failure is replaced by the neutral renderi
 
 ## Tests
 
-`bun test` uses scripted replies. It does not read `data/` and it does not call a tool.
+`bun test` uses scripted replies. It does not read export files and it does not call a tool.
+
+`bun run evals` renders `evals/persona/payload.json` in three voices and checks that the extracted facts match, then checks that a heavy payload stays soft.
