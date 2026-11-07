@@ -165,3 +165,8 @@ export async function insertMessages(sql: SQL, messages: ResolvedMessage[]): Pro
 export async function refreshDailyStats(sql: SQL): Promise<void> {
   await sql`select refresh_daily_stats()`;
 }
+
+/** Same transaction as the insert. Cache keys include this version, so a re-ingest cannot be served stale. */
+export async function bumpDataVersion(sql: SQL): Promise<void> {
+  await sql`select bump_data_version()`;
+}

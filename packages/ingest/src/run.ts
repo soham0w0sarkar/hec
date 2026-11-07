@@ -15,6 +15,7 @@ import {
   insertMessages,
   loadDisplayTimezone,
   recordRun,
+  bumpDataVersion,
   refreshDailyStats,
   replaceIdentities,
   storedForDedupe,
@@ -121,6 +122,8 @@ async function ingestFile(sql: SQL, file: ExportFile, context: FileContext): Pro
         inserted,
         skipped,
       });
+      // Rolls back with the insert if this transaction does not commit.
+      if (inserted > 0) await bumpDataVersion(tx);
 
       return report({ status: "succeeded", rowsSeen: seen, rowsInserted: inserted, rowsSkipped: skipped, warnings });
     });
