@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@hec/core": "workspace:*"
+    "@hec/core": "workspace:*",
+    "bullmq": "^6.7.1"
   },
   "devDependencies": {
     "@hec/config": "workspace:*"
