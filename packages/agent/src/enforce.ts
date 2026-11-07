@@ -59,7 +59,7 @@ export function enforce(draft: unknown, ledger: Ledger, question: string): Answe
     verdict = "not_found";
     caveats.push("No claim was supported by the search.");
   }
-  if (forced) verdict = "ambiguous";
+  if (forced && (verdict === "found" || verdict === "ambiguous")) verdict = "ambiguous";
   if (verdict === "ambiguous" && claims.length < 2) {
     caveats.push("The result is ambiguous, and only one supporting message was left after the checks.");
   }
