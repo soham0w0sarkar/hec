@@ -7,11 +7,13 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "embed": "bun --env-file=../../.env src/cli.ts"
   },
   "dependencies": {
     "@hec/core": "workspace:*",
-    "@hec/llm": "workspace:*"
+    "@hec/db": "workspace:*"
   },
   "devDependencies": {
     "@hec/config": "workspace:*"
