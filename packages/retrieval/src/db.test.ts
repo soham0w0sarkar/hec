@@ -10,6 +10,7 @@ import { hybridSearch } from "./hybrid";
 import { countMatches, findFirst, findLast, matchesPerPeriod, searchMessages } from "./keyword";
 import { runRead } from "./query";
 import { busiestDays, callCounts, streaks, whoMessagesFirst } from "./stats";
+import { listEvents } from "./events";
 import { searchChunks } from "./vector";
 
 const url = process.env.RETRIEVAL_TEST_DATABASE_URL;
@@ -18,8 +19,8 @@ if (url !== undefined) assertLocalTestDatabase(url);
 const describeDb = url ? describe : describe.skip;
 
 describeDb("retrieval against the local test database", () => {
-  if (!url) throw new Error("RETRIEVAL_TEST_DATABASE_URL is missing");
-  const sql: Database = createDb(url, { max: 1 });
+  // describe.skip still evaluates this callback. Do not open a connection unless the test URL is set.
+  const sql: Database = url ? createDb(url, { max: 1 }) : (undefined as unknown as Database);
 
   beforeAll(async () => {
     await reset(sql);
@@ -258,6 +259,55 @@ describeDb("retrieval against the local test database", () => {
       order by c.embedding <=> '${vector}'::vector
       limit 2`);
     expect(chunkPlan).toContain("chunks_embedding_hnsw");
+  });
+
+  test("listEvents returns approved and edited rows in time order and hides drafts", async () => {
+    const love = (await sql`select id from messages where source_ref = 'ig:loveee'`) as { id: string | number }[];
+    const messageId = love[0]?.id;
+    if (messageId === undefined) throw new Error("fixture message is missing");
+    const runs = (await sql`
+      insert into extraction_runs (model, prompt_version, status, finished_at)
+      values ('fixture', 'extract.v1', 'succeeded', now())
+      returning id
+    `) as { id: string | number }[];
+    const runId = runs[0]?.id;
+    if (runId === undefined) throw new Error("fixture run was not created");
+    try {
+      const inserted = (await sql`
+        insert into events (
+          title, summary, category, occurred_at, date_precision, status, extraction_run_id,
+          significance, is_first, speaker_id, quote
+        ) values
+          ('Cafe', 'They picked a cafe.', 'Meetup', '2030-06-01T04:30:00Z', 'exact_day', 'approved', ${runId}, 1, false, null, null),
+          ('Argument', 'They argued and left it.', 'Conflict', '2030-06-03T04:00:00Z', 'exact_day', 'approved', ${runId}, 2, false, null, null),
+          ('Hidden', 'A draft nobody reviewed.', 'Plan', '2030-06-02T04:00:00Z', 'exact_day', 'draft', ${runId}, 1, false, null, null),
+          ('Line', 'A line worth keeping.', 'Saying', '2030-06-04T04:00:00Z', 'exact_day', 'edited', ${runId}, 1, false, 'person_2', 'keep this line')
+        returning id, category
+      `) as { id: string | number; category: string }[];
+      const conflict = inserted.find((row) => row.category === "Conflict");
+      if (!conflict) throw new Error("conflict event is missing");
+      await sql`insert into event_evidence (event_id, message_id, role) values (${conflict.id}, ${messageId}, 'primary')`;
+
+      const page = await listEvents(sql, { limit: 2 });
+      expect(page.events.map((event) => event.category)).toEqual(["Meetup", "Conflict"]);
+      expect(page.events.map((event) => event.status)).toEqual(["approved", "approved"]);
+      expect(page.events[0]?.occurredAtIst.startsWith("2030-06-01")).toBe(true);
+      expect(page.events[1]?.evidenceMessageIds).toEqual([Number(messageId)]);
+      expect(page.next).not.toBeNull();
+
+      const rest = await listEvents(sql, { limit: 2, after: page.next ?? undefined });
+      expect(rest.events.map((event) => event.category)).toEqual(["Saying"]);
+      expect(rest.events[0]?.quote).toBe("keep this line");
+      expect(rest.events[0]?.speakerId).toBe("person_2");
+      expect(rest.next).toBeNull();
+
+      const onlyConflict = await listEvents(sql, { category: "Conflict" });
+      expect(onlyConflict.events.map((event) => event.title)).toEqual(["Argument"]);
+    } finally {
+      await sql`delete from event_evidence`;
+      await sql`delete from events`;
+      await sql`delete from extraction_runs`;
+    }
   });
 
   test("a statement that overruns the timeout becomes a timeout error", async () => {

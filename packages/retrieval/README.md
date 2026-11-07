@@ -48,7 +48,7 @@ Shared filters on the keyword functions, `hybridSearch`, and (except the date ra
 | `callCounts` | Sum of calls and messages from `daily_stats`. |
 | `countsPerPeriod` | Message and call totals per day, week, or month from `daily_stats`. |
 | `encodingIssueCounts` | Counts of U+FFFD, of mojibake-shaped text, and of text that is not NFC. Counts only. |
-| `readDataVersion` | The counter ingest bumps in the same transaction as an insert. |
+| `listEvents` | Approved and edited timeline events, oldest first, with evidence message ids (capped at 50 per event). Drafts and rejected rows are left out. `from` is inclusive, `until` is exclusive. The page cap is 100. A cursor in `next` continues the page. |
 | `memoryRetrievalCache` / `redisRetrievalCache` | Optional. The key is the data version plus a hash of the query. After a bump the old entry is never read. Pass `cache` on the call. Cache failures are ignored. The Redis value contains result text, so it belongs on your own Redis. |
 
 `fromDay` / `untilDay` on the stats functions are `YYYY-MM-DD` in the display timezone, inclusive start, exclusive end.

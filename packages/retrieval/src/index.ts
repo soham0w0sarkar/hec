@@ -19,6 +19,8 @@ export {
   TRIGRAM_WORD_SIMILARITY,
 } from "./constants";
 export { getContextAround, getDayTranscript } from "./context";
+export { encodeEventCursor, eventStatement, listEvents, parseEventCursor, prepareEventList, MAX_EVIDENCE_IDS } from "./events";
+export type { EventHit, EventListQuery, EventPage } from "./events";
 export type { TranscriptQuery } from "./context";
 export { encodingIssueCounts } from "./encoding";
 export { RetrievalError } from "./errors";
