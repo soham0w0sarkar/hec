@@ -21,6 +21,23 @@ export type DatePrecision = (typeof DATE_PRECISIONS)[number];
 export const EVENT_STATUSES = ["draft", "approved", "edited", "rejected"] as const;
 export type EventStatus = (typeof EVENT_STATUSES)[number];
 
+/** The nine timeline categories, spelled exactly like this in the database and the review file. */
+export const EVENT_CATEGORIES = [
+  "Milestone",
+  "Meetup",
+  "Trip",
+  "Celebration",
+  "Plan",
+  "Conflict",
+  "Running joke",
+  "Saying",
+  "Life update",
+] as const;
+export type EventCategory = (typeof EVENT_CATEGORIES)[number];
+
+export const SIGNIFICANCE_LEVELS = [1, 2, 3] as const;
+export type Significance = (typeof SIGNIFICANCE_LEVELS)[number];
+
 /** Statuses the timeline page shows. */
 export const TIMELINE_EVENT_STATUSES = ["approved", "edited"] as const;
 
@@ -102,12 +119,23 @@ export type Event = {
   id: number;
   title: string;
   summary: string;
-  category: string;
+  category: EventCategory;
   occurredAt: Date;
   datePrecision: DatePrecision;
+  endedAt: Date | null;
+  significance: Significance;
+  isFirst: boolean;
+  firstOf: string | null;
+  firstCheck: FirstCheck | null;
+  /** Set for Saying events only. */
+  speakerId: PersonId | null;
+  quote: string | null;
   status: EventStatus;
   extractionRunId: number;
 };
+
+export const FIRST_CHECKS = ["verified", "refuted", "unverified", "superseded"] as const;
+export type FirstCheck = (typeof FIRST_CHECKS)[number];
 
 export type EventEvidence = {
   eventId: number;
@@ -137,3 +165,15 @@ export type IngestRun = {
   startedAt: Date;
   finishedAt: Date | null;
 };
+
+export {
+  ANSWER_PAYLOAD_VERSION,
+  AnswerClaimSchema,
+  AnswerPayloadSchema,
+  CLAIM_BASES,
+  CONFIDENCE_LEVELS,
+  QUESTION_TYPES,
+  SENSITIVITY_LEVELS,
+  VERDICTS,
+} from "./answer-payload";
+export type { AnswerClaim, AnswerPayload, ClaimBasis, Confidence, QuestionType, Sensitivity, Verdict } from "./answer-payload";
