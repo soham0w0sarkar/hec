@@ -15,7 +15,11 @@ export async function migrate(sql: SQL): Promise<string[]> {
     )
   `;
 
-  const files = (await readdir(migrationsDir)).filter((name) => name.endsWith(".sql")).sort();
+  // *.down.sql sits beside a migration so it can be undone by hand. The runner
+  // applies only the forward files, in name order.
+  const files = (await readdir(migrationsDir))
+    .filter((name) => name.endsWith(".sql") && !name.endsWith(".down.sql"))
+    .sort();
   const appliedRows = await sql<{ version: string }[]>`SELECT version FROM schema_migrations`;
   const applied = new Set(appliedRows.map((row) => row.version));
 
