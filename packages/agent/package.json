@@ -7,13 +7,15 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "evals": "bun ../../evals/agent/run.ts"
   },
   "dependencies": {
     "@hec/core": "workspace:*",
     "@hec/llm": "workspace:*",
-    "@hec/persona": "workspace:*",
-    "@hec/retrieval": "workspace:*"
+    "@hec/retrieval": "workspace:*",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@hec/config": "workspace:*"
