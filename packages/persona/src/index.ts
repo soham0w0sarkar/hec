@@ -1,3 +1,4 @@
-// System prompt for the cheeky romance-novel-geek voice.
-// Only affects wording. Must never touch search logic.
-export {};
+export { neutralText } from "./neutral";
+export { loadPersonaPrompt } from "./prompt";
+export { extractFacts, readVerdict, validateRender } from "./validate";
+export type { FactCheck } from "./validate";
