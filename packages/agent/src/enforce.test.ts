@@ -65,6 +65,69 @@ describe("enforce", () => {
     expect(payload.confidence).toBe("medium");
   });
 
+  test("rebuilds a first_last answer from the search hit when draft claims fail", () => {
+    const ledger = withMessages(message({ id: 11, text: "Love you, bye" }));
+    ledger.looks.push({
+      tool: "find_first",
+      hitId: 11,
+      runnerIds: [],
+      byPerson: [],
+      bySource: [],
+    });
+    const payload = enforce(
+      {
+        question_type: "first_last",
+        verdict: "not_found",
+        sensitivity: "none",
+        confidence: "low",
+        interpretation_note: "Nothing matched.",
+        claims: [
+          {
+            text: "Nobody said it.",
+            message_ids: [999],
+            date: "2030-06-01",
+            person: "Ravi",
+            source: "instagram",
+            quote: "nope",
+            basis: "messages",
+          },
+        ],
+      },
+      ledger,
+      "who said I love you first",
+    );
+    expect(payload.verdict).toBe("found");
+    expect(payload.claims).toHaveLength(1);
+    expect(payload.claims[0]?.message_ids).toEqual([11]);
+    expect(payload.claims[0]?.quote).toBe("Love you, bye");
+  });
+
+  test("allows digits that already appear in the cited message", () => {
+    const ledger = withMessages(message({ id: 12, text: "I can fight 1000 dragons for you" }));
+    const payload = enforce(
+      {
+        question_type: "first_last",
+        verdict: "found",
+        sensitivity: "none",
+        claims: [
+          {
+            text: "Ravi sent I can fight 1000 dragons for you.",
+            message_ids: [12],
+            date: "2030-06-01",
+            person: "Ravi",
+            source: "instagram",
+            quote: "I can fight 1000 dragons for you",
+            basis: "messages",
+          },
+        ],
+      },
+      ledger,
+      "who said dragons first",
+    );
+    expect(payload.claims).toHaveLength(1);
+    expect(payload.verdict).toBe("found");
+  });
+
   test("a claim that only quoted text the search did not return is dropped", () => {
     const ledger = withMessages(message());
     const payload = enforce(

@@ -51,9 +51,25 @@ export function enforce(draft: unknown, ledger: Ledger, question: string): Answe
     }
   }
 
+  // find_first / find_last already named a winner — keep it if the draft claims all failed checks.
+  let rescuedFromLook = false;
+  if (claims.length === 0 && questionType === "first_last" && look?.hitId) {
+    const winner = ledger.messages.get(look.hitId);
+    const built = winner ? claimFor(winner) : null;
+    if (built) {
+      claims.push(built);
+      rescuedFromLook = true;
+    }
+  }
+
   let verdict: Verdict = known(VERDICTS, record.verdict) ?? (claims.length > 0 ? "found" : "not_found");
   const caveats = cleanList(record.caveats);
-  if (verdict === "not_found") {
+  if (verdict === "not_found" && claims.length > 0 && questionType === "first_last") {
+    // Tool found a first/last hit; a bare not_found draft does not wipe it.
+    verdict = forced ? "ambiguous" : "found";
+    rescuedFromLook = true;
+    caveats.push("Answer rebuilt from the first/last search hit after the draft claims failed checks.");
+  } else if (verdict === "not_found") {
     claims.length = 0;
   } else if (verdict === "found" && claims.length === 0) {
     verdict = "not_found";
@@ -73,8 +89,10 @@ export function enforce(draft: unknown, ledger: Ledger, question: string): Answe
     ? "Two matching messages are close in time, so this does not pick a single first."
     : verdict === "not_found"
       ? "Nothing in the search supported an answer."
-      : plain(typeof record.interpretation_note === "string" ? record.interpretation_note : "", 500) ||
-        "Read from the messages the search returned.";
+      : rescuedFromLook
+        ? "Earliest matching message from the search."
+        : plain(typeof record.interpretation_note === "string" ? record.interpretation_note : "", 500) ||
+          "Read from the messages the search returned.";
 
   if (questionType === "first_last" && look) caveats.push(...alternativeCaveats(look, ledger));
   if (forced) {
@@ -145,7 +163,9 @@ function cleanClaim(raw: unknown, ledger: Ledger, question: string): AnswerClaim
     return { text, message_ids: [], date, person: null, source: null, quote: null, basis };
   }
 
-  const ids = messageIds(record.message_ids).filter((id) => usableId(id, ledger, question, basis));
+  const ids = messageIds(record.message_ids)
+    .filter((id) => usableId(id, ledger, question, basis))
+    .slice(0, 5);
   if (basis === "messages" && ids.length === 0) return null;
   if (basis === "timeline" && !timelineOk(record, ledger, ids)) return null;
 
@@ -158,7 +178,17 @@ function cleanClaim(raw: unknown, ledger: Ledger, question: string): AnswerClaim
   const date = typeof record.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(record.date) ? record.date : null;
 
   if (basis === "messages") {
-    if (person && !cited.some((message) => message.name === person || message.personId === person)) return null;
+    if (
+      person &&
+      !cited.some(
+        (message) =>
+          message.name === person ||
+          message.personId === person ||
+          message.name.toLowerCase() === person.toLowerCase(),
+      )
+    ) {
+      return null;
+    }
     if (source && !cited.some((message) => message.source === source)) return null;
     if (date && !cited.some((message) => message.sentAtIst.startsWith(date))) return null;
   }
@@ -174,7 +204,7 @@ function cleanClaim(raw: unknown, ledger: Ledger, question: string): AnswerClaim
     if (text.includes(keptQuote)) return null;
     keptQuote = null;
   }
-  if (!numbersFit(text, allowedFigures(ledger, basis, ids, date))) return null;
+  if (!numbersFit(text, allowedFigures(ledger, basis, ids, date, cited))) return null;
 
   return {
     text,
@@ -222,9 +252,19 @@ function quoteFits(
   return eventsFor(ledger, cited.map((message) => message.id), date).some((event) => event.quote?.includes(quote));
 }
 
-function allowedFigures(ledger: Ledger, basis: ClaimBasis, ids: number[], date: unknown): Set<number> {
+function allowedFigures(
+  ledger: Ledger,
+  basis: ClaimBasis,
+  ids: number[],
+  date: unknown,
+  cited: readonly LedgerMessage[] = [],
+): Set<number> {
   const ok = new Set<number>(basis === "count" || basis === "stats" ? ledger.figures : []);
   for (const id of ids) ok.add(id);
+  // Digits that already appear in a cited message (or its quote) are not invented numbers.
+  for (const message of cited) {
+    for (const token of message.text.match(/\d+/g) ?? []) ok.add(Number(token));
+  }
   const days = [typeof date === "string" ? date : "", ...(basis === "stats" ? ledger.statDates : [])];
   if (basis === "timeline") {
     for (const event of ledger.events) {

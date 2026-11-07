@@ -28,7 +28,17 @@ import {
 import type { Embedder } from "./embed";
 import { collectFigures, rememberMessage, rememberTool, type Ledger, type LedgerMessage, type RankedLook } from "./ledger";
 import { isIntimateText, questionWantsIntimate } from "./sensitive";
-import { isToolName, toolSchemas, type ToolName } from "./tool-schema";
+import { applySpokenKinds, isSaidFirstQuestion, messageSaysPhrase } from "./spoken";
+import { TOOL_VARIANTS, isToolName, toolSchemas, type ToolName } from "./tool-schema";
+
+const SPOKEN_KIND_TOOLS = new Set<ToolName>([
+  "find_first",
+  "find_last",
+  "count_matches",
+  "matches_per_period",
+  "keyword_search",
+  "hybrid_search",
+]);
 
 export type RetrievalPort = {
   findFirst: typeof findFirst;
@@ -108,12 +118,42 @@ type MatchInput = {
 };
 
 /**
+ * Models often send more spelling variants than the cap. Keep the first unique ones instead of failing
+ * the whole search. The result echoes the variants that were used, so the model can see the cut.
+ */
+export function capVariants(input: unknown): unknown {
+  if (!input || typeof input !== "object") return input;
+  const record = input as Record<string, unknown>;
+  if (!Array.isArray(record.variants)) return input;
+  const seen = new Set<string>();
+  const variants: unknown[] = [];
+  for (const item of record.variants) {
+    if (typeof item !== "string") {
+      variants.push(item);
+      continue;
+    }
+    const trimmed = item.trim();
+    const key = trimmed.toLowerCase();
+    if (trimmed === "" || seen.has(key)) continue;
+    seen.add(key);
+    variants.push(trimmed);
+    if (variants.length === TOOL_VARIANTS) break;
+  }
+  return { ...record, variants };
+}
+
+/**
  * Runs one tool. Bad input and retrieval failures come back as `{ error }` and do not throw.
  * The error string never includes message text. Intimate lines are kept on the ledger and left out of `body`.
  */
 export async function executeTool(name: string, input: unknown, env: ToolEnv): Promise<ToolOutcome> {
   if (!isToolName(name)) return { count: 0, body: { error: "unknown tool" } };
-  const parsed = toolSchemas[name].safeParse(input);
+  const capped = capVariants(input);
+  const shaped =
+    SPOKEN_KIND_TOOLS.has(name) && capped && typeof capped === "object"
+      ? applySpokenKinds(env.question, capped as Record<string, unknown>)
+      : capped;
+  const parsed = toolSchemas[name].safeParse(shaped);
   if (!parsed.success) return { count: 0, body: { error: `invalid_input: ${issuePaths(parsed.error)}` } };
   const value = parsed.data as Record<string, unknown>;
   rememberTool(env.ledger, name, value);
@@ -199,10 +239,19 @@ async function rankedTool(env: ToolEnv, which: "findFirst" | "findLast", input: 
   const base = keywordOf(input);
   const runnersUp = input.runners_up ?? 5;
   const options = { timeoutMs: env.timeoutMs };
+  const phrases = [input.text, ...(input.variants ?? [])].map((item) => item.trim()).filter((item) => item.length > 0);
+  const spokenOnly = isSaidFirstQuestion(env.question);
+
+  const pick = async (extra: Record<string, unknown> = {}) => {
+    let page = await env.port[which](env.sql, { ...base, runnersUp, ...extra }, options);
+    if (!spokenOnly) return page;
+    return firstSpokenRanked(env, which, { ...base, runnersUp, ...extra }, page, phrases, options);
+  };
+
   const [main, ...rest] = await Promise.all([
-    env.port[which](env.sql, { ...base, runnersUp }, options),
-    ...PERSON_IDS.map((personId) => env.port[which](env.sql, { ...base, personId, runnersUp: 0 }, options)),
-    ...MESSAGE_SOURCES.map((source) => env.port[which](env.sql, { ...base, source, runnersUp: 0 }, options)),
+    pick(),
+    ...PERSON_IDS.map((personId) => pick({ personId, runnersUp: 0 })),
+    ...MESSAGE_SOURCES.map((source) => pick({ source, runnersUp: 0 })),
   ]);
   const people = rest.slice(0, PERSON_IDS.length);
   const sources = rest.slice(PERSON_IDS.length);
@@ -235,8 +284,45 @@ async function rankedTool(env: ToolEnv, which: "findFirst" | "findLast", input: 
       runners_up: main.runnersUp.filter((hit) => !isHidden(hit, env)).map(cite),
       by_person: byPerson,
       by_source: bySource,
+      ...(spokenOnly ? { spoken_phrase_only: true } : {}),
     },
   };
+}
+
+type RankedPage = Awaited<ReturnType<RetrievalPort["findFirst"]>>;
+
+/** Skip substring false positives (e.g. "who love you") for said-first questions. */
+async function firstSpokenRanked(
+  env: ToolEnv,
+  which: "findFirst" | "findLast",
+  query: Record<string, unknown>,
+  initial: RankedPage,
+  phrases: string[],
+  options: { timeoutMs: number },
+): Promise<RankedPage> {
+  let page = initial;
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const pool = [page.hit, ...page.runnersUp].filter((hit): hit is KeywordHit => hit !== null);
+    const spoken = pool.filter((hit) => messageSaysPhrase(hit.text, phrases));
+    if (spoken.length > 0) {
+      const hit = spoken[0]!;
+      const rest = [
+        ...spoken.filter((item) => item.id !== hit.id),
+        // Keep substring false-positives visible as data, but never as the winner.
+        ...pool.filter((item) => !spoken.some((ok) => ok.id === item.id)),
+      ];
+      const limit = typeof query.runnersUp === "number" ? query.runnersUp : 5;
+      return { ...page, hit, runnersUp: rest.slice(0, limit) };
+    }
+    const edge = which === "findFirst" ? page.hit ?? page.runnersUp.at(-1) : page.hit ?? page.runnersUp[0];
+    if (!edge) return { ...page, hit: null, runnersUp: [] };
+    const nextQuery =
+      which === "findFirst"
+        ? { ...query, from: new Date(edge.sentAt.getTime() + 1) }
+        : { ...query, until: edge.sentAt };
+    page = await env.port[which](env.sql, nextQuery as never, options);
+  }
+  return { ...page, hit: null, runnersUp: [] };
 }
 
 async function semantic(env: ToolEnv, input: Record<string, unknown>, hybrid: boolean): Promise<ToolOutcome> {

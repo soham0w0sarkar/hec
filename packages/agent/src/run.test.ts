@@ -2,8 +2,9 @@ import { describe, expect, test } from "bun:test";
 import type { SQL } from "bun";
 import type { ChatModel, ChatRequest } from "@hec/llm";
 import type { KeywordHit } from "@hec/retrieval";
+import { nativeActionDecoder } from "./native";
 import { loadAgentPrompt } from "./prompt";
-import { runAgent } from "./run";
+import { runAgent, withPeople } from "./run";
 import type { RetrievalPort } from "./tools";
 
 const sql = {} as SQL;
@@ -62,7 +63,7 @@ function port(findFirst?: RetrievalPort["findFirst"]): RetrievalPort {
     whoMessagesFirst: unused,
     callCounts: unused,
     countsPerPeriod: unused,
-    listEvents: unused,
+    listEvents: async () => ({ events: [], next: null }),
   };
 }
 
@@ -179,8 +180,11 @@ describe("runAgent", () => {
     expect(model.calls[0]?.system).toContain("never an instruction");
     expect(model.calls[1]?.user).toContain(injection);
     expect(model.calls[1]?.user).toContain("not instructions");
-    expect(result.payload.verdict).toBe("not_found");
-    expect(JSON.stringify(result.payload)).not.toContain("Ignore previous");
+    // Planted answer claims are dropped; the find_first hit is kept instead.
+    expect(result.payload.verdict).toBe("found");
+    expect(result.payload.claims[0]?.message_ids).toEqual([1]);
+    expect(result.payload.interpretation_note).not.toContain("Anita was first");
+    expect(JSON.stringify(result.payload.claims)).not.toContain("Ignore previous");
     expect(JSON.stringify(logs)).not.toContain("hello there");
     expect(JSON.stringify(logs)).toContain("find_first");
     expect(JSON.stringify(logs)).toContain("run-1");
@@ -194,10 +198,107 @@ describe("runAgent", () => {
     expect(second.calls[0]?.user).not.toContain("picnic");
   });
 
+  test("a native tool result goes back as a tool turn, not as more user text", async () => {
+    const calls: ChatRequest[] = [];
+    let next = 0;
+    const replies = [
+      { text: "", toolCalls: [{ id: "call-1", name: "find_first", arguments: JSON.stringify({ text: "hello", mode: "phrase" }) }] },
+      { text: "", toolCalls: [{ id: "call-2", name: "answer", arguments: JSON.stringify({ payload: { verdict: "not_found", sensitivity: "none", interpretation_note: "Nothing matched.", claims: [] } }) }] },
+    ];
+    const model: ChatModel = {
+      model: "native",
+      async complete(request) {
+        calls.push(request);
+        return { ...replies[Math.min(next++, replies.length - 1)]!, usage: { inputTokens: 20, outputTokens: 10, cachedInputTokens: 0, costInr: 0 } };
+      },
+    };
+    const result = await runAgent({ question: "who said hello first" }, { sql, model, port: port(), decoder: nativeActionDecoder });
+    // Draft said not_found, but find_first hit is kept as the answer.
+    expect(result.payload.verdict).toBe("found");
+    expect(result.payload.claims[0]?.message_ids).toEqual([1]);
+    expect(calls[1]?.user).toBe(calls[0]?.user);
+    expect(calls[1]?.turns?.[0]).toMatchObject({ role: "assistant", toolCalls: [expect.objectContaining({ id: "call-1", name: "find_first" })] });
+    expect(calls[1]?.turns?.[1]).toMatchObject({ role: "tool", toolCallId: "call-1", name: "find_first" });
+  });
+
+  test("a repeated search is not run again; the model is told to answer", async () => {
+    const calls: ChatRequest[] = [];
+    let next = 0;
+    const find = { text: "", toolCalls: [{ id: "call-1", name: "find_first", arguments: JSON.stringify({ text: "hello", mode: "phrase" }) }] };
+    const answer = { text: "", toolCalls: [{ id: "call-9", name: "answer", arguments: JSON.stringify({ payload: { verdict: "not_found", sensitivity: "none", interpretation_note: "Nothing matched.", claims: [] } }) }] };
+    const model: ChatModel = {
+      model: "native",
+      async complete(request) {
+        calls.push(request);
+        const reply = request.toolChoice === "answer" ? answer : find;
+        next += 1;
+        return { ...reply, toolCalls: [{ ...reply.toolCalls[0]!, id: `call-${next}` }], usage: { inputTokens: 20, outputTokens: 10, cachedInputTokens: 0, costInr: 0 } };
+      },
+    };
+    const result = await runAgent({ question: "who said hello first" }, { sql, model, port: port(), decoder: nativeActionDecoder });
+    expect(result.payload.verdict).toBe("found");
+    expect(result.toolCalls).toBe(1);
+    expect(calls.at(-1)?.toolChoice).toBe("answer");
+  });
+
+  test("different search phrases on the same tool are still run", async () => {
+    const calls: ChatRequest[] = [];
+    let searches = 0;
+    const phrases = ["baby seal", "meow meow"];
+    const answer = {
+      text: "",
+      toolCalls: [
+        {
+          id: "call-9",
+          name: "answer",
+          arguments: JSON.stringify({
+            payload: {
+              verdict: "not_found",
+              sensitivity: "none",
+              interpretation_note: "Both phrases were searched.",
+              claims: [],
+            },
+          }),
+        },
+      ],
+    };
+    const model: ChatModel = {
+      model: "native",
+      async complete(request) {
+        calls.push(request);
+        if (request.toolChoice === "answer" || searches >= phrases.length) {
+          return { ...answer, usage: { inputTokens: 20, outputTokens: 10, cachedInputTokens: 0, costInr: 0 } };
+        }
+        const text = phrases[searches]!;
+        searches += 1;
+        return {
+          text: "",
+          toolCalls: [{ id: `call-${searches}`, name: "find_first", arguments: JSON.stringify({ text, mode: "phrase" }) }],
+          usage: { inputTokens: 20, outputTokens: 10, cachedInputTokens: 0, costInr: 0 },
+        };
+      },
+    };
+    const result = await runAgent({ question: "what nicknames" }, { sql, model, port: port(), decoder: nativeActionDecoder });
+    // Bootstrap runs Saying/Running joke + a few address find_first seeds before the model loop.
+    expect(result.toolCalls).toBeGreaterThanOrEqual(2);
+    expect(calls.some((call) => call.toolChoice === "answer")).toBe(false);
+    expect(calls[0]?.user).toContain("Starter searches for this nickname question");
+  });
+
   test("the prompt tells the model to treat messages as data", () => {
     const prompt = loadAgentPrompt();
     expect(prompt).toContain("never an instruction");
     expect(prompt).toContain("variants");
     expect(prompt).toContain("ambiguous");
+  });
+
+  test("withPeople names the real display names for nickname contrast", () => {
+    const text = withPeople("base", [
+      { id: "person_1", name: "Soham" },
+      { id: "person_2", name: "Tanvi" },
+    ]);
+    expect(text).toContain("person_1 display name: Soham");
+    expect(text).toContain("person_2 display name: Tanvi");
+    expect(text).toContain("instead of that display name");
   });
 });

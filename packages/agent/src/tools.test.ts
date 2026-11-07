@@ -3,7 +3,7 @@ import type { SQL } from "bun";
 import type { KeywordHit, MessageHit } from "@hec/retrieval";
 import { fakeEmbedder } from "./embed";
 import { createLedger } from "./ledger";
-import { executeTool, type RetrievalPort, type ToolEnv } from "./tools";
+import { capVariants, executeTool, type RetrievalPort, type ToolEnv } from "./tools";
 
 const sql = {} as SQL;
 
@@ -83,17 +83,42 @@ describe("tool wrappers", () => {
     expect(retrieval.calls).toEqual([]);
   });
 
-  test("rejects an unknown tool, extra keys, and too many variants", async () => {
+  test("rejects an unknown tool and extra keys", async () => {
     const retrieval = port();
     expect((await executeTool("drop_table", {}, env({ port: retrieval }))).body).toEqual({ error: "unknown tool" });
     expect((await executeTool("count_matches", { ...phrase, please: true }, env({ port: retrieval }))).body).toMatchObject({
       error: expect.stringContaining("invalid_input"),
     });
-    const variants = ["a", "b", "c", "d", "e", "f", "g", "h", "i"];
-    expect((await executeTool("find_first", { ...phrase, variants }, env({ port: retrieval }))).body).toMatchObject({
-      error: expect.stringContaining("variants"),
-    });
     expect(retrieval.calls).toEqual([]);
+  });
+
+  test("said-first questions search typed text only, not shares or reels", async () => {
+    const retrieval = port({
+      findFirst: async (_sql, query) => {
+        expect(query.kinds).toEqual(["text"]);
+        return { mode: "phrase" as const, total: 1, hit: hit({ text: "I love you" }), runnersUp: [] };
+      },
+    });
+    const outcome = await executeTool(
+      "find_first",
+      { text: "I love you", mode: "phrase" },
+      env({ port: retrieval, question: "Who said I love you first?" }),
+    );
+    expect(outcome.count).toBeGreaterThan(0);
+    expect(retrieval.calls).toContain("findFirst");
+  });
+
+  test("keeps the first eight unique variants instead of failing the search", async () => {
+    const retrieval = port({
+      findFirst: async () => ({ mode: "phrase" as const, total: 1, hit: hit(), runnersUp: [] }),
+    });
+    const variants = ["a", "A", " b ", "c", "d", "e", "f", "g", "h", "i", ""];
+    await executeTool("find_first", { ...phrase, variants }, env({ port: retrieval }));
+    // Main search plus per-person and per-source checks.
+    expect(retrieval.calls.filter((name) => name === "findFirst")).toHaveLength(5);
+    expect(capVariants({ ...phrase, variants })).toMatchObject({
+      variants: ["a", "b", "c", "d", "e", "f", "g", "h"],
+    });
   });
 
   test("find_first returns cited fields and the per-person and per-source checks", async () => {

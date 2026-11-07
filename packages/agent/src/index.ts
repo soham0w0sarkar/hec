@@ -1,9 +1,10 @@
 export { enforce, inferQuestionType, CLOSE_MATCH_MS } from "./enforce";
 export { loadAgentPrompt } from "./prompt";
 export { jsonActionDecoder, markToolData } from "./protocol";
-export type { ActionDecoder, AgentAction } from "./protocol";
-export { DEFAULT_BUDGET, runAgent } from "./run";
-export type { AgentBudget, AgentDeps, AgentLog, AgentLogger, AgentResult, HistoryTurn } from "./run";
+export type { ActionDecoder, AgentAction, ModelReply } from "./protocol";
+export { ANSWER_TOOL, nativeActionDecoder, toolDefinitions } from "./native";
+export { DEFAULT_BUDGET, runAgent, withPeople } from "./run";
+export type { AgentBudget, AgentDeps, AgentLog, AgentLogger, AgentPerson, AgentResult, HistoryTurn } from "./run";
 export { fakeEmbedder } from "./embed";
 export type { Embedder } from "./embed";
 export { createLedger } from "./ledger";
