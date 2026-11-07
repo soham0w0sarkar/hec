@@ -1,0 +1,35 @@
+{
+  "synthetic": true,
+  "note": "Invented 2030 messages from packages/retrieval/src/fixture.ts. No export text.",
+  "cases": [
+    {
+      "id": "first-love-you",
+      "text": "love you",
+      "mode": "phrase",
+      "expectSourceRef": "ig:loveee",
+      "expectPersonId": "person_1"
+    },
+    {
+      "id": "first-good-morning",
+      "text": "good morning",
+      "mode": "phrase",
+      "expectSourceRef": "ig:morning",
+      "expectPersonId": "person_1"
+    },
+    {
+      "id": "first-luv",
+      "text": "luv",
+      "mode": "fuzzy",
+      "expectSourceRef": "wa:luv",
+      "expectPersonId": "person_2"
+    },
+    {
+      "id": "variant-does-not-steal-first",
+      "text": "love you",
+      "mode": "phrase",
+      "variants": ["luv u"],
+      "expectSourceRef": "ig:loveee",
+      "expectPersonId": "person_1"
+    }
+  ]
+}

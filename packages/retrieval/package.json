@@ -9,11 +9,14 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "bun test",
+    "test:db": "RETRIEVAL_TEST_DATABASE_URL=postgres://postgres@127.0.0.1:55432/hec_retrieval_test bun test src/db.test.ts",
+    "evals": "RETRIEVAL_TEST_DATABASE_URL=postgres://postgres@127.0.0.1:55432/hec_retrieval_test bun src/eval-run.ts",
     "search": "bun --env-file=../../.env src/cli.ts"
   },
   "dependencies": {
     "@hec/core": "workspace:*",
-    "@hec/db": "workspace:*"
+    "@hec/db": "workspace:*",
+    "ioredis": "^5.8.2"
   },
   "devDependencies": {
     "@hec/config": "workspace:*"
