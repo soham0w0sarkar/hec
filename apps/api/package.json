@@ -4,15 +4,20 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun --watch src/index.ts",
-    "start": "bun src/index.ts",
-    "typecheck": "tsc --noEmit"
+    "dev": "bun --env-file=../../.env --watch src/index.ts",
+    "start": "bun --env-file=../../.env src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
   },
   "dependencies": {
     "@hec/agent": "workspace:*",
     "@hec/core": "workspace:*",
     "@hec/db": "workspace:*",
-    "@hec/retrieval": "workspace:*"
+    "@hec/embeddings": "workspace:*",
+    "@hec/llm": "workspace:*",
+    "@hec/persona": "workspace:*",
+    "@hec/retrieval": "workspace:*",
+    "ioredis": "^5.8.2"
   },
   "devDependencies": {
     "@hec/config": "workspace:*"
