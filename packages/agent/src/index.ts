@@ -1,3 +1,4 @@
+export { enforce, inferQuestionType, CLOSE_MATCH_MS } from "./enforce";
 export { fakeEmbedder } from "./embed";
 export type { Embedder } from "./embed";
 export { createLedger } from "./ledger";
