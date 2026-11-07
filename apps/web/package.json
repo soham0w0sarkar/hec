@@ -4,12 +4,16 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "dev": "vite",
+    "build": "vite build",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@fontsource/press-start-2p": "^5.2.3",
     "@hec/core": "workspace:*"
   },
   "devDependencies": {
-    "@hec/config": "workspace:*"
+    "@hec/config": "workspace:*",
+    "vite": "^6.4.1"
   }
 }

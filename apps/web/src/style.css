@@ -1,0 +1,648 @@
+:root {
+  color-scheme: dark;
+  --night: #1d1430;
+  font-family: "Press Start 2P", ui-monospace, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--night);
+}
+
+#app {
+  height: 100%;
+}
+
+.stage,
+.monitor {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: var(--night);
+}
+
+.monitor canvas {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.monitor canvas:focus {
+  outline: none;
+}
+
+.panel {
+  position: fixed;
+  z-index: 2;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(720px, calc(100vw - 32px));
+  height: min(680px, calc(100vh - 40px));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px 18px 14px;
+  background: #2a1b3d;
+  color: #ffd9a0;
+  border: 4px solid #f7b98a;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+  font-family: Georgia, "Iowan Old Style", Palatino, serif;
+  font-size: 17px;
+  line-height: 1.45;
+}
+
+.panel[hidden] {
+  display: none;
+}
+
+.perch {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  z-index: 3;
+  pointer-events: none;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.panel h1 {
+  margin: 0;
+  font-family: "Press Start 2P", ui-monospace, monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #ffe4a8;
+}
+
+.panel .note,
+.panel .proof {
+  margin: 0;
+  color: #f7b98a;
+  font-size: 15px;
+}
+
+.panel .sheet {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+
+.panel .turn {
+  margin: 0;
+}
+
+.panel .turn p {
+  margin: 0 0 4px;
+  white-space: pre-wrap;
+}
+
+.panel .mine {
+  color: #fff3d1;
+}
+
+.panel .ask {
+  display: flex;
+  gap: 8px;
+}
+
+.panel input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  font: inherit;
+  color: #ffd9a0;
+  background: #1d1430;
+  border: 2px solid #f7b98a;
+}
+
+.panel button {
+  font-family: "Press Start 2P", ui-monospace, monospace;
+  font-size: 9px;
+  color: #2a1b3d;
+  background: #f7b98a;
+  border: 0;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.panel button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.panel .back {
+  align-self: flex-start;
+  background: transparent;
+  color: #f7b98a;
+  border: 2px solid #f7b98a;
+}
+
+/* Windows: chat, timeline, stats */
+
+.panel.room {
+  width: min(640px, calc(100vw - 32px));
+  gap: 0;
+  padding: 0;
+  background: #231733;
+  border: 4px solid #f7b98a;
+  box-shadow:
+    inset 0 0 0 4px #1d1430,
+    8px 8px 0 rgba(10, 6, 20, 0.55);
+}
+
+.room .bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 14px 12px 20px;
+  background: #2a1b3d;
+  border-bottom: 4px solid #1d1430;
+}
+
+.room .bar h1 {
+  font-size: 12px;
+}
+
+.room .tools {
+  display: flex;
+  gap: 8px;
+}
+
+.panel .icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  color: #2a1b3d;
+  background: #f7b98a;
+  box-shadow:
+    inset -3px -3px 0 #d68a4a,
+    inset 3px 3px 0 #ffd9a0;
+}
+
+.panel .icon:hover {
+  background: #ffd27a;
+}
+
+.panel .icon:active {
+  box-shadow:
+    inset 3px 3px 0 #d68a4a,
+    inset -3px -3px 0 #ffd9a0;
+}
+
+.panel .icon:focus-visible,
+.chat input:focus-visible {
+  outline: 3px solid #f2708f;
+  outline-offset: 2px;
+}
+
+.px {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+.chat .log {
+  gap: 14px;
+  padding: 18px 18px 8px;
+  scrollbar-width: thin;
+  scrollbar-color: #7a4a7a transparent;
+}
+
+.room .empty {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  color: #7a4a7a;
+}
+
+.room .empty .px {
+  width: 56px;
+  height: 48px;
+  animation: beat 1.6s steps(2, jump-none) infinite;
+}
+
+.chat .row {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  max-width: 88%;
+}
+
+.chat .row.mine {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.chat .avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  color: #f2708f;
+  background: #2a1b3d;
+  border: 2px solid #7a4a7a;
+}
+
+.chat .bubble {
+  --fill: #3b2a55;
+  margin: 4px;
+  padding: 8px 12px;
+  color: #ffd9a0;
+  background: var(--fill);
+  box-shadow:
+    0 -4px 0 0 var(--fill),
+    0 4px 0 0 var(--fill),
+    -4px 0 0 0 var(--fill),
+    4px 0 0 0 var(--fill);
+}
+
+.chat .mine .bubble {
+  --fill: #f7b98a;
+  color: #2a1b3d;
+}
+
+.chat .bubble p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.chat .proof-card {
+  margin: 10px 0 2px;
+  padding: 8px 10px;
+  background: #2a1b3d;
+  border-left: 4px solid #f2708f;
+  font-size: 14px;
+}
+
+.chat .proof-card .meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.chat .proof-card .meta span {
+  padding: 3px 6px;
+  font-family: "Press Start 2P", ui-monospace, monospace;
+  font-size: 8px;
+  line-height: 1.4;
+  color: #2a1b3d;
+  background: #ffd27a;
+}
+
+.chat .proof-card .quote {
+  color: #f7a1b6;
+  font-style: italic;
+}
+
+.room .typing {
+  display: flex;
+  gap: 6px;
+  padding: 12px 14px;
+}
+
+.room .typing span {
+  width: 6px;
+  height: 6px;
+  background: #ffd9a0;
+  animation: hop 0.9s steps(1, end) infinite;
+}
+
+.room .typing span:nth-child(2) {
+  animation-delay: 0.3s;
+}
+
+.room .typing span:nth-child(3) {
+  animation-delay: 0.6s;
+}
+
+.chat .ask {
+  gap: 10px;
+  padding: 12px 14px 14px;
+  background: #2a1b3d;
+  border-top: 4px solid #1d1430;
+}
+
+.chat input {
+  padding: 10px 12px;
+  background: #1d1430;
+  border: 0;
+  box-shadow: inset 3px 3px 0 #120c1e;
+}
+
+.chat input::placeholder {
+  color: #7a4a7a;
+}
+
+.chat .send {
+  width: 44px;
+  height: 44px;
+  background: #f2708f;
+  color: #fff3d1;
+  box-shadow:
+    inset -3px -3px 0 #b5668a,
+    inset 3px 3px 0 #f7a1b6;
+}
+
+.chat .send:hover {
+  background: #f7a1b6;
+}
+
+.room .typing.wait {
+  margin: auto;
+}
+
+.room .path {
+  gap: 0;
+  padding: 12px 18px 20px;
+}
+
+.mile {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 12px;
+}
+
+.mile .lamp {
+  width: 8px;
+  justify-self: center;
+  background:
+    linear-gradient(#ffd27a, #ffd27a) center top / 8px 6px no-repeat,
+    linear-gradient(#4a3024, #4a3024) center top 6px / 3px 100% no-repeat;
+}
+
+.mile-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  background: #2a1b3d;
+  box-shadow: 4px 4px 0 #1d1430;
+}
+
+.mile-body .meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mile-body .meta span,
+.context .line span:first-child {
+  padding: 3px 6px;
+  font-family: "Press Start 2P", ui-monospace, monospace;
+  font-size: 8px;
+  line-height: 1.4;
+  color: #2a1b3d;
+  background: #ffd27a;
+}
+
+.mile-title {
+  margin: 0;
+  font-family: "Press Start 2P", ui-monospace, monospace;
+  font-size: 10px;
+  line-height: 1.6;
+  color: #ffe4a8;
+}
+
+.mile-body .quote {
+  margin: 0;
+  color: #f7a1b6;
+  font-style: italic;
+}
+
+.context {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.context .line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: baseline;
+  margin: 0;
+}
+
+.context time {
+  font-family: "Press Start 2P", ui-monospace, monospace;
+  font-size: 8px;
+  color: #7a4a7a;
+}
+
+.room .score {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+.level,
+.streak,
+.versus,
+.hiscore {
+  background: #2a1b3d;
+  box-shadow: 4px 4px 0 #1d1430;
+}
+
+.level {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 12px;
+  align-items: center;
+  padding: 14px;
+}
+
+.level b,
+.streak b {
+  font-family: "Press Start 2P", ui-monospace, monospace;
+  font-size: 20px;
+  color: #ffe4a8;
+}
+
+.level span,
+.hiscore,
+.versus .tag,
+.streak .rank,
+.streak .best,
+.streak .calls {
+  font-family: "Press Start 2P", ui-monospace, monospace;
+  font-size: 8px;
+  color: #f7b98a;
+}
+
+.xp {
+  display: flex;
+  gap: 3px;
+}
+
+.xp i {
+  width: 10px;
+  height: 14px;
+  background: #1d1430;
+}
+
+.xp i.on {
+  background: #f2708f;
+  box-shadow: inset 0 3px #f7a1b6;
+}
+
+.level span {
+  grid-column: 2;
+}
+
+.streak {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+}
+
+.streak .px {
+  width: 22px;
+  height: 18px;
+  color: #f2708f;
+}
+
+.streak .rank,
+.streak .best {
+  padding: 4px 6px;
+  color: #2a1b3d;
+  background: #ffd27a;
+}
+
+.streak .best {
+  background: #f2708f;
+  color: #fff3d1;
+}
+
+.streak .calls {
+  margin-left: auto;
+}
+
+.versus {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+}
+
+.versus .tag {
+  color: #ffe4a8;
+}
+
+.side {
+  display: grid;
+  grid-template-columns: 72px 1fr 40px;
+  gap: 8px;
+  align-items: center;
+}
+
+.side span,
+.side em,
+.hiscore li {
+  font-family: "Press Start 2P", ui-monospace, monospace;
+  font-size: 8px;
+  font-style: normal;
+  color: #ffd9a0;
+}
+
+.side i {
+  display: block;
+  height: 12px;
+  background: #1d1430;
+}
+
+.side b {
+  display: block;
+  height: 100%;
+}
+
+.side.rose b {
+  background: #e0768f;
+}
+
+.side.blue b {
+  background: #6fa3c7;
+}
+
+.hiscore {
+  margin: 0;
+  padding: 8px 12px;
+  list-style: none;
+}
+
+.hiscore li {
+  display: grid;
+  grid-template-columns: 24px 1fr auto;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 2px solid #1d1430;
+}
+
+.hiscore li:last-child {
+  border-bottom: 0;
+}
+
+.hiscore b {
+  color: #ffd27a;
+}
+
+@keyframes hop {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  33% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes beat {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.12);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .room .typing span,
+  .room .empty .px {
+    animation: none;
+  }
+}
+
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
