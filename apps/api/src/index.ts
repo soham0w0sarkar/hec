@@ -7,6 +7,7 @@ import { createApi } from "./http";
 import { redisChatMemory } from "./memory";
 
 const port = portFrom(process.env.PORT);
+const host = process.env.HOST?.trim() || "127.0.0.1";
 const sql = createDb(process.env.DATABASE_URL, { max: 4 });
 const model = createSarvamChat({
   apiKey: process.env.SARVAM_API_KEY ?? "",
@@ -30,7 +31,7 @@ const api = createApi({
 });
 
 const server = Bun.serve({
-  hostname: "127.0.0.1",
+  hostname: host,
   port,
   async fetch(request) {
     try {
@@ -42,7 +43,7 @@ const server = Bun.serve({
   },
 });
 
-console.log(`hec api on http://127.0.0.1:${server.port}`);
+console.log(`hec api on http://${host}:${server.port}`);
 
 async function refreshChunksModel(db: SQL): Promise<void> {
   if (Date.now() - chunksModel.at < 30_000) return;
