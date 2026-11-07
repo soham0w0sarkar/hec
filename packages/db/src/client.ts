@@ -7,8 +7,15 @@ export type CreateDbOptions = {
 };
 
 function useTls(connectionString: string): boolean {
-  const host = new URL(connectionString).hostname;
-  return host !== "localhost" && host !== "127.0.0.1";
+  const url = new URL(connectionString);
+
+  if (url.searchParams.get("sslmode") === "disable") return false;
+
+  const override = process.env.PG_TLS?.toLowerCase();
+  if (override === "off" || override === "disable" || override === "false") return false;
+  if (override === "on" || override === "require" || override === "true") return true;
+
+  return url.hostname !== "localhost" && url.hostname !== "127.0.0.1" && url.hostname !== "::1";
 }
 
 export function createDb(connectionString = process.env.DATABASE_URL, options: CreateDbOptions = {}): Database {
