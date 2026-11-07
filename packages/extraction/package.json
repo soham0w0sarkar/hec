@@ -7,12 +7,21 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "extract": "bun --env-file=../../.env src/cli.ts extract",
+    "review": "bun --env-file=../../.env src/cli.ts review",
+    "review:export": "bun --env-file=../../.env src/cli.ts review:export",
+    "review:import": "bun --env-file=../../.env src/cli.ts review:import",
+    "evals": "bun ../../evals/extraction/run.ts"
   },
   "dependencies": {
     "@hec/core": "workspace:*",
     "@hec/db": "workspace:*",
-    "@hec/llm": "workspace:*"
+    "@hec/llm": "workspace:*",
+    "@hec/queue": "workspace:*",
+    "@hec/retrieval": "workspace:*",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@hec/config": "workspace:*"

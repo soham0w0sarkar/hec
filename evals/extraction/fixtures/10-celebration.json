@@ -1,0 +1,81 @@
+{
+  "synthetic": true,
+  "name": "celebration",
+  "description": "A birthday marked in the chat at midnight.",
+  "labels": {
+    "person_1": "Ravi",
+    "person_2": "Anita"
+  },
+  "messages": [
+    {
+      "id": 9000001,
+      "at": "2030-12-03 00:00",
+      "who": "person_1",
+      "source": "ig",
+      "text": "happy birthday meri jaan 🎂🎉",
+      "kind": "text"
+    },
+    {
+      "id": 9000002,
+      "at": "2030-12-03 00:01",
+      "who": "person_2",
+      "source": "ig",
+      "text": "awww tune yaad rakha, thank you!!",
+      "kind": "text"
+    },
+    {
+      "id": 9000003,
+      "at": "2030-12-03 00:02",
+      "who": "person_1",
+      "source": "ig",
+      "text": "kal subah cake leke aaunga",
+      "kind": "text"
+    }
+  ],
+  "expected": [
+    {
+      "category": "Celebration",
+      "title": "Her birthday",
+      "summary": "He wished her happy birthday at midnight.",
+      "occurred_at": "2030-12-03 00:00",
+      "date_precision": "day",
+      "ended_at": null,
+      "significance": 2,
+      "is_first": false,
+      "first_of": null,
+      "evidence": [
+        {
+          "ref": "m9000001",
+          "role": "primary"
+        },
+        {
+          "ref": "m9000002",
+          "role": "supporting"
+        }
+      ],
+      "saying": null
+    },
+    {
+      "category": "Plan",
+      "title": "Bringing cake in the morning",
+      "summary": "He said he would bring cake the next morning.",
+      "occurred_at": "2030-12-03 00:02",
+      "date_precision": "day",
+      "ended_at": null,
+      "significance": 1,
+      "is_first": false,
+      "first_of": null,
+      "evidence": [
+        {
+          "ref": "m9000003",
+          "role": "primary"
+        }
+      ],
+      "saying": null
+    }
+  ],
+  "forbiddenCategories": [
+    "Meetup",
+    "Trip"
+  ]
+}

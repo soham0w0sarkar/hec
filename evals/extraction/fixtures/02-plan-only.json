@@ -1,0 +1,76 @@
+{
+  "synthetic": true,
+  "name": "plan only",
+  "description": "They talk about a trip but nothing happens. Must be a Plan, never a Trip or Meetup.",
+  "labels": {
+    "person_1": "Ravi",
+    "person_2": "Anita"
+  },
+  "messages": [
+    {
+      "id": 9000001,
+      "at": "2030-04-10 22:10",
+      "who": "person_1",
+      "source": "ig",
+      "text": "summer me ek baar manali chalte hain",
+      "kind": "text"
+    },
+    {
+      "id": 9000002,
+      "at": "2030-04-10 22:11",
+      "who": "person_2",
+      "source": "ig",
+      "text": "haan pakka! june ke end me?",
+      "kind": "text"
+    },
+    {
+      "id": 9000003,
+      "at": "2030-04-10 22:12",
+      "who": "person_1",
+      "source": "ig",
+      "text": "dekhte hain, leave milti hai ya nahi",
+      "kind": "text"
+    },
+    {
+      "id": 9000004,
+      "at": "2030-04-10 22:13",
+      "who": "person_2",
+      "source": "ig",
+      "text": "hum plan banate hain, bas tum mukar mat jana 😂",
+      "kind": "text"
+    }
+  ],
+  "expected": [
+    {
+      "category": "Plan",
+      "title": "Manali trip idea for June",
+      "summary": "They discussed going to Manali at the end of June, pending leave.",
+      "occurred_at": "2030-04-10 22:12",
+      "date_precision": "day",
+      "ended_at": null,
+      "significance": 1,
+      "is_first": false,
+      "first_of": null,
+      "evidence": [
+        {
+          "ref": "m9000001",
+          "role": "primary"
+        },
+        {
+          "ref": "m9000002",
+          "role": "supporting"
+        },
+        {
+          "ref": "m9000003",
+          "role": "supporting"
+        }
+      ],
+      "saying": null
+    }
+  ],
+  "forbiddenCategories": [
+    "Trip",
+    "Meetup",
+    "Milestone"
+  ]
+}

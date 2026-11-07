@@ -1,0 +1,63 @@
+{
+  "synthetic": true,
+  "name": "life update",
+  "description": "News about one person's job. No mood scoring.",
+  "labels": {
+    "person_1": "Ravi",
+    "person_2": "Anita"
+  },
+  "messages": [
+    {
+      "id": 9000001,
+      "at": "2030-10-01 11:20",
+      "who": "person_2",
+      "source": "ig",
+      "text": "guess what, offer letter aa gaya!!",
+      "kind": "text"
+    },
+    {
+      "id": 9000002,
+      "at": "2030-10-01 11:21",
+      "who": "person_1",
+      "source": "ig",
+      "text": "kya baat hai!! kab join karna hai?",
+      "kind": "text"
+    },
+    {
+      "id": 9000003,
+      "at": "2030-10-01 11:22",
+      "who": "person_2",
+      "source": "ig",
+      "text": "15 tarikh se, naya office koramangala me hai",
+      "kind": "text"
+    }
+  ],
+  "expected": [
+    {
+      "category": "Life update",
+      "title": "Her new job offer",
+      "summary": "She received a job offer and will join on the 15th at an office in Koramangala.",
+      "occurred_at": "2030-10-01 11:20",
+      "date_precision": "day",
+      "ended_at": null,
+      "significance": 2,
+      "is_first": false,
+      "first_of": null,
+      "evidence": [
+        {
+          "ref": "m9000001",
+          "role": "primary"
+        },
+        {
+          "ref": "m9000003",
+          "role": "supporting"
+        }
+      ],
+      "saying": null
+    }
+  ],
+  "forbiddenCategories": [
+    "Meetup",
+    "Trip"
+  ]
+}

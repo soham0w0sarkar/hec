@@ -1,0 +1,63 @@
+{
+  "synthetic": true,
+  "name": "small talk",
+  "description": "Ordinary chatter. Returning no events is the correct outcome.",
+  "labels": {
+    "person_1": "Ravi",
+    "person_2": "Anita"
+  },
+  "messages": [
+    {
+      "id": 9000001,
+      "at": "2030-05-03 13:00",
+      "who": "person_2",
+      "source": "ig",
+      "text": "khana khaya?",
+      "kind": "text"
+    },
+    {
+      "id": 9000002,
+      "at": "2030-05-03 13:02",
+      "who": "person_1",
+      "source": "ig",
+      "text": "haan, tune?",
+      "kind": "text"
+    },
+    {
+      "id": 9000003,
+      "at": "2030-05-03 13:03",
+      "who": "person_2",
+      "source": "ig",
+      "text": "abhi kha rahi hu, office ki canteen",
+      "kind": "text"
+    },
+    {
+      "id": 9000004,
+      "at": "2030-05-03 13:04",
+      "who": "person_1",
+      "source": "ig",
+      "text": "ok ok, meeting hai 2 baje, baad me baat karte hain",
+      "kind": "text"
+    },
+    {
+      "id": 9000005,
+      "at": "2030-05-03 13:04",
+      "who": "person_2",
+      "source": "ig",
+      "text": "theek hai bye",
+      "kind": "text"
+    }
+  ],
+  "expected": [],
+  "forbiddenCategories": [
+    "Milestone",
+    "Meetup",
+    "Trip",
+    "Celebration",
+    "Plan",
+    "Conflict",
+    "Running joke",
+    "Saying",
+    "Life update"
+  ]
+}

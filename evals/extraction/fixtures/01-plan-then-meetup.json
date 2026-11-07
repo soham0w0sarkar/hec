@@ -1,0 +1,125 @@
+{
+  "synthetic": true,
+  "name": "plan then meetup",
+  "description": "A plan made in the morning and a meetup that really happens in the evening. Two separate events.",
+  "labels": {
+    "person_1": "Ravi",
+    "person_2": "Anita"
+  },
+  "messages": [
+    {
+      "id": 9000001,
+      "at": "2030-03-02 10:05",
+      "who": "person_2",
+      "source": "ig",
+      "text": "kal ya aaj coffee chalein? ♡",
+      "kind": "text"
+    },
+    {
+      "id": 9000002,
+      "at": "2030-03-02 10:06",
+      "who": "person_1",
+      "source": "ig",
+      "text": "aaj hi chalte hain, 6 baje Bean Street pe?",
+      "kind": "text"
+    },
+    {
+      "id": 9000003,
+      "at": "2030-03-02 10:07",
+      "who": "person_2",
+      "source": "ig",
+      "text": "done done",
+      "kind": "text"
+    },
+    {
+      "id": 9000004,
+      "at": "2030-03-02 17:55",
+      "who": "person_1",
+      "source": "ig",
+      "text": "pahunch gaya, corner table pe hu",
+      "kind": "text"
+    },
+    {
+      "id": 9000005,
+      "at": "2030-03-02 18:01",
+      "who": "person_2",
+      "source": "ig",
+      "text": "aa rahi hu, 2 min",
+      "kind": "text"
+    },
+    {
+      "id": 9000006,
+      "at": "2030-03-02 21:30",
+      "who": "person_2",
+      "source": "ig",
+      "text": "aaj ka din bohot accha tha, thanks for the coffee",
+      "kind": "text"
+    },
+    {
+      "id": 9000007,
+      "at": "2030-03-02 21:31",
+      "who": "person_1",
+      "source": "ig",
+      "text": "same here, ghar pahunch ke msg karna",
+      "kind": "text"
+    }
+  ],
+  "expected": [
+    {
+      "category": "Plan",
+      "title": "Coffee plan for the evening",
+      "summary": "They agreed to meet for coffee at 6 pm at Bean Street.",
+      "occurred_at": "2030-03-02 10:06",
+      "date_precision": "day",
+      "ended_at": null,
+      "significance": 1,
+      "is_first": false,
+      "first_of": null,
+      "evidence": [
+        {
+          "ref": "m9000001",
+          "role": "supporting"
+        },
+        {
+          "ref": "m9000002",
+          "role": "primary"
+        },
+        {
+          "ref": "m9000003",
+          "role": "supporting"
+        }
+      ],
+      "saying": null
+    },
+    {
+      "category": "Meetup",
+      "title": "Coffee at Bean Street",
+      "summary": "They met at Bean Street for coffee and both said it was a good day.",
+      "occurred_at": "2030-03-02 18:01",
+      "date_precision": "day",
+      "ended_at": null,
+      "significance": 1,
+      "is_first": false,
+      "first_of": null,
+      "evidence": [
+        {
+          "ref": "m9000004",
+          "role": "primary"
+        },
+        {
+          "ref": "m9000005",
+          "role": "supporting"
+        },
+        {
+          "ref": "m9000006",
+          "role": "supporting"
+        }
+      ],
+      "saying": null
+    }
+  ],
+  "forbiddenCategories": [
+    "Trip",
+    "Conflict"
+  ]
+}

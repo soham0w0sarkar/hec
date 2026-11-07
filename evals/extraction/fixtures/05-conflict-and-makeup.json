@@ -1,0 +1,87 @@
+{
+  "synthetic": true,
+  "name": "conflict",
+  "description": "A real argument about a forgotten call, and how it ended.",
+  "labels": {
+    "person_1": "Ravi",
+    "person_2": "Anita"
+  },
+  "messages": [
+    {
+      "id": 9000001,
+      "at": "2030-07-21 20:00",
+      "who": "person_2",
+      "source": "ig",
+      "text": "tune kal call karne ko bola tha, wait karti rahi",
+      "kind": "text"
+    },
+    {
+      "id": 9000002,
+      "at": "2030-07-21 20:01",
+      "who": "person_1",
+      "source": "ig",
+      "text": "sorry, kaam me phas gaya tha",
+      "kind": "text"
+    },
+    {
+      "id": 9000003,
+      "at": "2030-07-21 20:02",
+      "who": "person_2",
+      "source": "ig",
+      "text": "har baar yehi bolta hai, mujhe bura lagta hai",
+      "kind": "text"
+    },
+    {
+      "id": 9000004,
+      "at": "2030-07-21 20:20",
+      "who": "person_1",
+      "source": "ig",
+      "text": "tu sahi hai, mujhe yaad rakhna chahiye tha. promise aaj raat pakka call karunga",
+      "kind": "text"
+    },
+    {
+      "id": 9000005,
+      "at": "2030-07-21 20:25",
+      "who": "person_2",
+      "source": "ig",
+      "text": "theek hai, maaf kiya. raat ko call karna",
+      "kind": "text"
+    }
+  ],
+  "expected": [
+    {
+      "category": "Conflict",
+      "title": "Argument over a missed call",
+      "summary": "She was upset that he forgot a promised call. He apologised and she forgave him.",
+      "occurred_at": "2030-07-21 20:20",
+      "date_precision": "day",
+      "ended_at": null,
+      "significance": 1,
+      "is_first": false,
+      "first_of": null,
+      "evidence": [
+        {
+          "ref": "m9000001",
+          "role": "primary"
+        },
+        {
+          "ref": "m9000003",
+          "role": "supporting"
+        },
+        {
+          "ref": "m9000004",
+          "role": "supporting"
+        },
+        {
+          "ref": "m9000005",
+          "role": "primary"
+        }
+      ],
+      "saying": null
+    }
+  ],
+  "forbiddenCategories": [
+    "Meetup",
+    "Trip"
+  ]
+}

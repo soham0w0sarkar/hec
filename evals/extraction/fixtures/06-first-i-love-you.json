@@ -1,0 +1,63 @@
+{
+  "synthetic": true,
+  "name": "first i love you",
+  "description": "The messages say it is the first time. The claim carries search words so pass 3 can check it.",
+  "labels": {
+    "person_1": "Ravi",
+    "person_2": "Anita"
+  },
+  "messages": [
+    {
+      "id": 9000001,
+      "at": "2030-08-09 00:05",
+      "who": "person_1",
+      "source": "ig",
+      "text": "ek baat bolu? pehli baar bol raha hu, i love you",
+      "kind": "text"
+    },
+    {
+      "id": 9000002,
+      "at": "2030-08-09 00:06",
+      "who": "person_2",
+      "source": "ig",
+      "text": "mujhe pata tha tu aaj bolega 🥹",
+      "kind": "text"
+    },
+    {
+      "id": 9000003,
+      "at": "2030-08-09 00:07",
+      "who": "person_2",
+      "source": "ig",
+      "text": "i love you too, hamesha se",
+      "kind": "text"
+    }
+  ],
+  "expected": [
+    {
+      "category": "Milestone",
+      "title": "First 'i love you'",
+      "summary": "He said 'i love you' for the first time and she said it back.",
+      "occurred_at": "2030-08-09 00:05",
+      "date_precision": "day",
+      "ended_at": null,
+      "significance": 3,
+      "is_first": true,
+      "first_of": "i love you",
+      "evidence": [
+        {
+          "ref": "m9000001",
+          "role": "primary"
+        },
+        {
+          "ref": "m9000003",
+          "role": "primary"
+        }
+      ],
+      "saying": null
+    }
+  ],
+  "forbiddenCategories": [
+    "Trip",
+    "Conflict"
+  ]
+}

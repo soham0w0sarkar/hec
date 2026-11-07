@@ -1,0 +1,55 @@
+{
+  "synthetic": true,
+  "name": "mood only",
+  "description": "A mood and a guess about feelings. Nothing happened that the messages show. Must return nothing.",
+  "labels": {
+    "person_1": "Ravi",
+    "person_2": "Anita"
+  },
+  "messages": [
+    {
+      "id": 9000001,
+      "at": "2030-11-05 22:00",
+      "who": "person_1",
+      "source": "ig",
+      "text": "kuch off sa lag raha hai aaj",
+      "kind": "text"
+    },
+    {
+      "id": 9000002,
+      "at": "2030-11-05 22:01",
+      "who": "person_2",
+      "source": "ig",
+      "text": "kya hua?",
+      "kind": "text"
+    },
+    {
+      "id": 9000003,
+      "at": "2030-11-05 22:02",
+      "who": "person_1",
+      "source": "ig",
+      "text": "pata nahi, shayad neend nahi aa rahi",
+      "kind": "text"
+    },
+    {
+      "id": 9000004,
+      "at": "2030-11-05 22:03",
+      "who": "person_2",
+      "source": "ig",
+      "text": "so jao, kal baat karte hain",
+      "kind": "text"
+    }
+  ],
+  "expected": [],
+  "forbiddenCategories": [
+    "Milestone",
+    "Meetup",
+    "Trip",
+    "Celebration",
+    "Plan",
+    "Conflict",
+    "Running joke",
+    "Saying",
+    "Life update"
+  ]
+}

@@ -1,0 +1,90 @@
+{
+  "synthetic": true,
+  "name": "trip",
+  "description": "A day trip that really happened, with an end time. Messages from both apps.",
+  "labels": {
+    "person_1": "Ravi",
+    "person_2": "Anita"
+  },
+  "messages": [
+    {
+      "id": 9000001,
+      "at": "2030-09-14 06:10",
+      "who": "person_1",
+      "source": "ig",
+      "text": "train me baith gaya, 2 ghante me lonavala",
+      "kind": "text"
+    },
+    {
+      "id": 9000002,
+      "at": "2030-09-14 06:12",
+      "who": "person_2",
+      "source": "wa",
+      "text": "main station pe hu, tera wait kar rahi",
+      "kind": "text"
+    },
+    {
+      "id": 9000003,
+      "at": "2030-09-14 08:30",
+      "who": "person_1",
+      "source": "wa",
+      "text": "pahunch gaye, baarish ho rahi hai",
+      "kind": "text"
+    },
+    {
+      "id": 9000004,
+      "at": "2030-09-14 14:00",
+      "who": "person_2",
+      "source": "wa",
+      "text": "bhutta khaya ❤️ photo bhej raha hai tu?",
+      "kind": "text"
+    },
+    {
+      "id": 9000005,
+      "at": "2030-09-14 14:02",
+      "who": "person_1",
+      "source": "wa",
+      "text": "",
+      "kind": "media"
+    },
+    {
+      "id": 9000006,
+      "at": "2030-09-14 19:45",
+      "who": "person_2",
+      "source": "wa",
+      "text": "waapas train me hu, thak gayi par maza aaya",
+      "kind": "text"
+    }
+  ],
+  "expected": [
+    {
+      "category": "Trip",
+      "title": "Day trip to Lonavala",
+      "summary": "They went to Lonavala together for the day, in the rain, and took the train back that evening.",
+      "occurred_at": "2030-09-14 08:30",
+      "date_precision": "day",
+      "ended_at": "2030-09-14 19:45",
+      "significance": 2,
+      "is_first": false,
+      "first_of": null,
+      "evidence": [
+        {
+          "ref": "m9000003",
+          "role": "primary"
+        },
+        {
+          "ref": "m9000004",
+          "role": "supporting"
+        },
+        {
+          "ref": "m9000006",
+          "role": "primary"
+        }
+      ],
+      "saying": null
+    }
+  ],
+  "forbiddenCategories": [
+    "Plan"
+  ]
+}

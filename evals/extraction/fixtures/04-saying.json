@@ -1,0 +1,59 @@
+{
+  "synthetic": true,
+  "name": "saying",
+  "description": "One message that is worth keeping word for word. The quote and speaker are checked in code.",
+  "labels": {
+    "person_1": "Ravi",
+    "person_2": "Anita"
+  },
+  "messages": [
+    {
+      "id": 9000001,
+      "at": "2030-06-14 23:40",
+      "who": "person_1",
+      "source": "ig",
+      "text": "tera din kaisa gaya?",
+      "kind": "text"
+    },
+    {
+      "id": 9000002,
+      "at": "2030-06-14 23:42",
+      "who": "person_2",
+      "source": "ig",
+      "text": "thaka hua, par tujhse baat karke sab theek ho jata hai",
+      "kind": "text"
+    },
+    {
+      "id": 9000003,
+      "at": "2030-06-14 23:42",
+      "who": "person_1",
+      "source": "ig",
+      "text": "aww",
+      "kind": "text"
+    }
+  ],
+  "expected": [
+    {
+      "category": "Saying",
+      "title": "Everything is okay after talking",
+      "summary": "She said that talking to him makes everything fine after a tiring day.",
+      "occurred_at": "2030-06-14 23:42",
+      "date_precision": "day",
+      "ended_at": null,
+      "significance": 1,
+      "is_first": false,
+      "first_of": null,
+      "evidence": [
+        {
+          "ref": "m9000002",
+          "role": "primary"
+        }
+      ],
+      "saying": {
+        "speaker": "Anita",
+        "quote": "tujhse baat karke sab theek ho jata hai"
+      }
+    }
+  ],
+  "forbiddenCategories": []
+}
