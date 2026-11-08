@@ -429,6 +429,28 @@ body {
   font-style: italic;
 }
 
+.mile.highlight .lamp {
+  width: 12px;
+  background:
+    linear-gradient(#fff1b8, #ffd27a) center top / 12px 10px no-repeat,
+    linear-gradient(#6b3a2c, #4a3024) center top 10px / 3px 100% no-repeat;
+  filter: drop-shadow(0 0 6px #ffd27a);
+}
+
+.mile.highlight .mile-body {
+  background: linear-gradient(160deg, #3b2452, #2a1b3d 60%);
+  box-shadow: 4px 4px 0 #120c1f, 0 0 0 2px #ffd27a;
+}
+
+.mile.highlight .mile-title {
+  font-size: 11px;
+  color: #fff1b8;
+}
+
+.mile-body .meta span.pin {
+  background: #f7a1b6;
+}
+
 .context {
   display: flex;
   flex-direction: column;

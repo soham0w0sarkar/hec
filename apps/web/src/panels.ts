@@ -17,6 +17,7 @@ type TimelineEvent = {
   summary: string;
   category: string;
   occurredAtIst: string;
+  highlight: boolean;
   quote: string | null;
   evidenceMessageIds: number[];
 };
@@ -310,7 +311,7 @@ async function loadTimeline(list: HTMLElement): Promise<void> {
     }
     for (const event of events) {
       const item = document.createElement("article");
-      item.className = "mile";
+      item.className = event.highlight ? "mile highlight" : "mile";
       const post = document.createElement("span");
       post.className = "lamp";
       const bodyCard = document.createElement("div");
@@ -320,6 +321,12 @@ async function loadTimeline(list: HTMLElement): Promise<void> {
       for (const bit of [event.occurredAtIst.slice(0, 10), event.category]) {
         const chip = document.createElement("span");
         chip.textContent = bit;
+        meta.append(chip);
+      }
+      if (event.highlight) {
+        const chip = document.createElement("span");
+        chip.className = "pin";
+        chip.textContent = "milestone";
         meta.append(chip);
       }
       const title = document.createElement("p");
