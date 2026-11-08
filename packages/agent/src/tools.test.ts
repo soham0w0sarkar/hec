@@ -245,6 +245,7 @@ describe("tool wrappers", () => {
             datePrecision: "exact_day" as const,
             endedAt: null,
             significance: 2,
+            highlight: false,
             isFirst: false,
             firstOf: null,
             speakerId: null,

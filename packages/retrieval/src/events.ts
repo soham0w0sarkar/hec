@@ -41,6 +41,7 @@ export type EventHit = {
   datePrecision: DatePrecision;
   endedAt: Date | null;
   significance: number;
+  highlight: boolean;
   isFirst: boolean;
   firstOf: string | null;
   speakerId: PersonId | null;
@@ -74,6 +75,7 @@ type EventRow = {
   date_precision: string;
   ended_at: Date | string | null;
   significance: number;
+  highlight: boolean;
   is_first: boolean;
   first_of: string | null;
   speaker_id: string | null;
@@ -135,7 +137,7 @@ export function eventStatement(query: PreparedEvents): { sql: string; params: un
   const sql = `
     select e.id, e.title, e.summary, e.category, e.occurred_at,
       format_display_time(e.occurred_at) as occurred_at_ist,
-      e.date_precision, e.ended_at, e.significance, e.is_first, e.first_of,
+      e.date_precision, e.ended_at, e.significance, e.highlight, e.is_first, e.first_of,
       e.speaker_id, e.quote, e.status,
       coalesce((
         select jsonb_agg(message_id order by message_id)
@@ -211,6 +213,7 @@ function toEventHit(row: EventRow): EventHit {
     datePrecision: known(DATE_PRECISIONS, row.date_precision, "date precision"),
     endedAt,
     significance: asCount(row.significance),
+    highlight: row.highlight,
     isFirst: row.is_first,
     firstOf: row.first_of,
     speakerId: row.speaker_id === null ? null : known(["person_1", "person_2"] as const, row.speaker_id, "person"),
