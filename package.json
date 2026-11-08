@@ -15,6 +15,7 @@
     "db:migrate": "bun --filter @hec/db migrate",
     "ingest": "bun --filter @hec/ingest ingest",
     "sessionize": "bun --filter @hec/sessionizer sessionize",
+    "embed": "bun --filter @hec/embeddings embed",
     "search": "bun --filter @hec/retrieval search",
     "test": "turbo run test",
     "clean": "turbo run clean",
