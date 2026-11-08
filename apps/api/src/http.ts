@@ -83,6 +83,7 @@ async function timeline(deps: ApiDeps, url: URL): Promise<Response> {
       occurredAtIst: event.occurredAtIst,
       datePrecision: event.datePrecision,
       significance: event.significance,
+      highlight: event.highlight,
       quote: event.quote,
       evidenceMessageIds: event.evidenceMessageIds,
     })),
