@@ -50,8 +50,13 @@ describe("phraseIsSpoken", () => {
     expect(phraseIsSpoken("Love you, bye", "love you")).toBe(true);
     expect(phraseIsSpoken("I love you", "I love you")).toBe(true);
     expect(phraseIsSpoken("Loveeee youuuuuu my baby seal", "love you")).toBe(true);
-    expect(phraseIsSpoken("(it all majak, I love you, sorry)", "I love you")).toBe(true);
+    expect(phraseIsSpoken("(I loveeee youuu toooo😘)", "I love you")).toBe(true);
     expect(phraseIsSpoken("I can fight 1000 LLM's who love you", "love you")).toBe(false);
     expect(phraseIsSpoken("I can fight 1000 LLM's who love you", "I love you")).toBe(false);
+  });
+
+  test("rejects a phrase wrapped in a joke", () => {
+    expect(phraseIsSpoken("(it all majak, I love you, sorry)", "I love you")).toBe(false);
+    expect(phraseIsSpoken("I love you, just kidding", "I love you")).toBe(false);
   });
 });

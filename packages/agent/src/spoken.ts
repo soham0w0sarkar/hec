@@ -50,12 +50,22 @@ export function phraseIsSpoken(haystack: string, needle: string): boolean {
         from = index + 1;
         continue;
       }
+      // A joke marker next to the phrase means it was not really said to the other person.
+      const context = h.slice(Math.max(0, index - JOKE_WINDOW), Math.min(h.length, afterIdx + JOKE_WINDOW));
+      if (JOKE_MARKER.test(context)) {
+        from = index + 1;
+        continue;
+      }
       return true;
     }
     from = index + 1;
   }
   return false;
 }
+
+/** Words that turn a nearby phrase into a joke rather than a spoken line. */
+const JOKE_MARKER = /\b(majak|mazaak|mazak|joke|joking|jk|kidding|kiding|sarcas\w*)\b/i;
+const JOKE_WINDOW = 40;
 
 function squash(value: string): string {
   return value
