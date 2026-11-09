@@ -174,7 +174,17 @@ body {
 }
 
 .room .bar h1 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-size: 12px;
+}
+
+.room .bar h1 img {
+  width: 22px;
+  height: 22px;
+  image-rendering: pixelated;
+  flex: none;
 }
 
 .room .tools {

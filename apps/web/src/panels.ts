@@ -425,7 +425,12 @@ async function loadStats(sheet: HTMLElement): Promise<void> {
 
 function heading(text: string): HTMLElement {
   const node = document.createElement("h1");
-  node.textContent = text;
+  const mark = document.createElement("img");
+  mark.src = "/logo.svg";
+  mark.alt = "";
+  mark.width = 22;
+  mark.height = 22;
+  node.append(mark, document.createTextNode(text));
   return node;
 }
 

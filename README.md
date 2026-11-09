@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="apps/web/public/logo.svg" width="96" height="96" alt="Happily Ever Cache logo" />
+</p>
+
 # HEC: Happily Ever Cache
 
 A private chatbot and timeline built on our own chat history, from Instagram and WhatsApp.
