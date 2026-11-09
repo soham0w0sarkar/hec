@@ -166,7 +166,7 @@ describe("runAgent", () => {
           personId: "person_1",
           sentAt: new Date("2030-06-02T04:30:00.000Z"),
           sentAtIst: "2030-06-02 10:00:00",
-          text: injection,
+          text: `hello ${injection}`,
           source: "whatsapp",
         }),
       ],

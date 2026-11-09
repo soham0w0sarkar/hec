@@ -108,6 +108,22 @@ describe("tool wrappers", () => {
     expect(retrieval.calls).toContain("findFirst");
   });
 
+  test("said-first hides an earlier joking mention from the runners-up", async () => {
+    const joke = hit({ id: 2, text: "(it all majak, I love you, sorry)", sentAt: new Date("2030-06-01T04:00:00.000Z") });
+    const real = hit({ id: 3, text: "I love you", sentAt: new Date("2030-06-01T06:00:00.000Z") });
+    const retrieval = port({
+      findFirst: async () => ({ mode: "phrase" as const, total: 2, hit: joke, runnersUp: [real] }),
+    });
+    const outcome = await executeTool(
+      "find_first",
+      { text: "I love you", mode: "phrase" },
+      env({ port: retrieval, question: "Who said I love you first?" }),
+    );
+    const body = outcome.body as { hit: { message_id: number }; runners_up: { message_id: number }[] };
+    expect(body.hit.message_id).toBe(3);
+    expect(body.runners_up.map((row) => row.message_id)).not.toContain(2);
+  });
+
   test("keeps the first eight unique variants instead of failing the search", async () => {
     const retrieval = port({
       findFirst: async () => ({ mode: "phrase" as const, total: 1, hit: hit(), runnersUp: [] }),

@@ -306,11 +306,9 @@ async function firstSpokenRanked(
     const spoken = pool.filter((hit) => messageSaysPhrase(hit.text, phrases));
     if (spoken.length > 0) {
       const hit = spoken[0]!;
-      const rest = [
-        ...spoken.filter((item) => item.id !== hit.id),
-        // Keep substring false-positives visible as data, but never as the winner.
-        ...pool.filter((item) => !spoken.some((ok) => ok.id === item.id)),
-      ];
+      // Only spoken matches become runners-up: an earlier joking mention would
+      // otherwise look like a better answer to the model.
+      const rest = spoken.filter((item) => item.id !== hit.id);
       const limit = typeof query.runnersUp === "number" ? query.runnersUp : 5;
       return { ...page, hit, runnersUp: rest.slice(0, limit) };
     }
