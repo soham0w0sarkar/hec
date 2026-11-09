@@ -236,6 +236,8 @@ The review file lists each event with its date, category, title, summary, eviden
 
 **Milestone pins.** `events.highlight` is a second flag, separate from `on_timeline`. The UI draws a highlighted row as a gold card with a pin. It is not part of the interactive reviewer; it is set on the row for a curated milestone (migration `0006_event_highlight.sql`).
 
+A "first" milestone must agree with retrieval. Its `occurred_at` is the earliest **spoken** match for the phrase, and that message is the primary evidence. For said-first questions the chat uses the same rule: shares and reels are dropped (a reposted caption cannot become the first), and a phrase next to a joke marker (`majak`, `joke`, `kidding`, …) is not counted as saying it. When correcting a milestone, also bump `data_version` after the update, or the timeline cache will keep the old row.
+
 **Model.** Sarvam `sarvam-105b` through `POST /v1/chat/completions`, reasoning off, because thinking tokens count against the output cap. Requests are retried on network errors, 429, and 5xx, but not 400, 401, or 402. Cost is recorded per session in rupees (`cost_inr`) from the price table in `packages/llm`. Settings come from `.env`: `SARVAM_API_KEY`, `SARVAM_MODEL`, `EXTRACTION_CONCURRENCY` (default 2).
 
 **Tests and evals.** `bun test` in `packages/extraction` covers validators, merge, firsts, job logic, and review import against an in-memory store. `bun run evals` checks synthetic fixtures in `evals/extraction/fixtures/`; `-- --live` runs the real model. Fixtures are dated 2030 or later and the loader refuses anything under `data/`.
