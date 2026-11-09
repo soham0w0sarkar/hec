@@ -26,7 +26,10 @@ const api = createApi({
       model,
       embedder,
       chunksModel: chunksModel.model,
-      log: (entry) => console.log(`chat ${entry.runId} ${entry.verdict} steps ${entry.steps} tools ${entry.toolCalls} ${entry.ms}ms`),
+      log: (entry) =>
+        console.log(
+          `chat ${entry.runId} ${entry.verdict} steps ${entry.steps} tools ${entry.toolCalls} ${entry.ms}ms${entry.personaFallback ? " voice-fallback" : ""}`,
+        ),
     }),
 });
 

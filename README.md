@@ -6,7 +6,7 @@
 
 A private chatbot and timeline built on our own chat history, from Instagram and WhatsApp.
 
-Ask it anything about us ("who said I love you first?", "when did we first call?", "what did we plan for Goa?") and it answers from the real messages, with dates and quotes as proof. It has a cheeky, romance-novel-geek personality. A second page shows our story as a timeline, with the milestones pinned.
+Ask it anything about us ("who said I love you first?", "when did we first call?", "what did we plan for Goa?") and it answers from the real messages, with dates and quotes as proof. It has a warm, dry, lightly playful voice. A second page shows our story as a timeline, with the milestones pinned.
 
 > **Privacy first:** this runs on very personal data. Raw chats and the name map live in `data/`, which is gitignored. Never commit them, never put them in a public image or volume. The app has no login, so keep it off the open internet or put it behind a private network.
 

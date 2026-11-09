@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, test } from "bun:test";
 import type { AnswerPayload } from "@hec/core";
 import type { ChatModel, ChatRequest } from "@hec/llm";
+import { voiceFallbackText } from "./fallback";
 import { neutralText } from "./neutral";
 import { loadPersonaPrompt } from "./prompt";
 import { render, type Persona } from "./render";
@@ -93,12 +94,15 @@ describe("render", () => {
     expect(geek.used_message_ids).toEqual([7, 8]);
   });
 
-  test("a failed fact check is retried once and then falls back to neutral", async () => {
+  test("a failed fact check is retried once and then keeps the voice", async () => {
     const body = payload();
     const model = speaking(() => "On 1999-01-01 they definitely said it.");
     const rendered = await render(body, "romance_geek", { model });
     expect(model.calls).toBe(2);
-    expect(rendered.text).toBe(neutralText(body));
+    expect(rendered.text).toBe(voiceFallbackText(body));
+    expect(rendered.text).not.toBe(neutralText(body));
+    expect(rendered.text).toContain("unclear");
+    expect(rendered.fallbackReasons?.some((reason) => reason.includes("1999-01-01"))).toBe(true);
     expect(rendered.mentioned_dates).toEqual(["2030-06-01"]);
   });
 
@@ -124,9 +128,57 @@ describe("render", () => {
     const model = speaking(() => "What a plot twist, the slow burn is teasing us 😉");
     const rendered = await render(body, "romance_geek", { model });
     expect(model.calls).toBe(2);
-    expect(rendered.text).toBe(neutralText(body));
-    expect(rendered.text).not.toMatch(/plot twist|teasing|😉|flirt/i);
+    expect(rendered.text).toBe(voiceFallbackText(body));
+    expect(rendered.text).not.toMatch(/plot twist|teasing|😉|flirt|archives|chapter/i);
+    expect(rendered.text).not.toContain("Verdict:");
+    expect(rendered.fallbackReasons?.length).toBeGreaterThan(0);
     expect(rendered.facts.verdict).toBe("found");
+  });
+
+  test("a natural 'couldn't find it' lead passes without the literal token", async () => {
+    const body = payload({
+      verdict: "not_found",
+      claims: [],
+      confidence: "low",
+      caveats: [],
+    });
+    const model = speaking(
+      () => "I checked the story for that one, and I couldn't find it. I'd rather leave the gap than invent it.",
+    );
+    const rendered = await render(body, "romance_geek", { model });
+    expect(model.calls).toBe(1);
+    expect(rendered.text).toContain("couldn't find it");
+    expect(rendered.fallbackReasons).toBeNull();
+  });
+
+  test("a heavy not_found fallback avoids the banned genre words", async () => {
+    const body = payload({
+      sensitivity: "heavy",
+      verdict: "not_found",
+      claims: [],
+      confidence: "low",
+      caveats: ["Only reviewed events are counted."],
+    });
+    const model = speaking(() => "The archives remain quiet, and no chapter exists yet.");
+    const rendered = await render(body, "romance_geek", { model });
+    expect(model.calls).toBe(2);
+    expect(rendered.text).toBe(voiceFallbackText(body));
+    expect(rendered.text).not.toMatch(/archives|chapter|plot twist|slow burn|teas|flirt|cheeky|😉/i);
+    expect(rendered.text).toContain("couldn't find a record");
+    expect(rendered.fallbackReasons?.length).toBeGreaterThan(0);
+  });
+
+  test("a model error falls back to the voice instead of throwing", async () => {
+    const body = payload();
+    const model: ChatModel = {
+      model: "broken",
+      async complete() {
+        throw new Error("provider down");
+      },
+    };
+    const rendered = await render(body, "romance_geek", { model });
+    expect(rendered.text).toBe(voiceFallbackText(body));
+    expect(rendered.fallbackReasons?.[0]).toContain("provider down");
   });
 
   test("a corrected retry is kept", async () => {
@@ -145,8 +197,9 @@ describe("render", () => {
 
   test("the romance prompt is the versioned file", () => {
     const text = loadPersonaPrompt();
-    expect(text.startsWith("You are HEC's narrator:")).toBe(true);
+    expect(text.startsWith("You are HEC, the keeper of this couple's story.")).toBe(true);
     expect(text).toContain("SOFT MODE (when payload.sensitivity is \"heavy\")");
     expect(text).toContain("You write a short voice lead only.");
+    expect(text).toContain("Do not use: archive, archives, chapter, plot twist");
   });
 });

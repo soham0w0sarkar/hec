@@ -23,7 +23,14 @@ export async function answerQuestion(
     embedder: Embedder | null;
     chunksModel: string | null;
     persona?: "romance_geek" | "neutral";
-    log?: (entry: { runId: string; ms: number; verdict: string; steps: number; toolCalls: number }) => void;
+    log?: (entry: {
+      runId: string;
+      ms: number;
+      verdict: string;
+      steps: number;
+      toolCalls: number;
+      personaFallback: boolean;
+    }) => void;
   },
 ): Promise<ChatAnswer> {
   const started = Date.now();
@@ -45,6 +52,7 @@ export async function answerQuestion(
     verdict: result.payload.verdict,
     steps: result.steps,
     toolCalls: result.toolCalls,
+    personaFallback: spoken.fallbackReasons !== null,
   });
   return {
     text: spoken.text,

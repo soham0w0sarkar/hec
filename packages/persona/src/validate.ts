@@ -3,9 +3,21 @@ import type { AnswerPayload, Verdict } from "@hec/core";
 const DATE = /\d{4}-\d{2}-\d{2}/g;
 const QUOTED = /"([^"]+)"|“([^”]+)”/g;
 
+/**
+ * Natural ways to say the search came back empty. The receipts state the verdict,
+ * so the lead only has to be honest, not use the literal token `not_found`.
+ */
+const NOT_FOUND =
+  /not[_ ]found|nothing matched|nothing in the search|could not find|couldn'?t find|did not find|didn'?t find|no message|no record|nothing on record|nothing recorded|not in the record|not on record|came up empty|came back empty|come up empty|turned up empty|no trace|no sign|no mention|no match|no such|don'?t have|doesn'?t have|isn'?t there|not there|nothing there/i;
+
+const PARTIAL = /\bpartial\b|\bonly part\b|\bpart of it\b|\bincomplete\b/i;
+
+const AMBIGUOUS =
+  /\b(ambiguous|unclear|either|both|not certain|cannot tell|can'?t tell|too close|don'?t agree|doesn'?t settle|not settled)\b/i;
+
 /** Joke and innuendo markers. Soft mode rejects a render that contains any of these. */
 const SOFT_BAN =
-  /\b(plot twist|slow burn|yearning|archives|flirt|flirty|tease|teasing|chapter|innuendo|cheeky|lol|lmao|haha|wink|sexy|shamelessly)\b|😉|;\)/i;
+  /\b(plot twist|slow burn|yearning|archives?|flirt|flirty|tease|teasing|chapter|innuendo|cheeky|lol|lmao|haha|wink|sexy|shamelessly)\b|😉|;\)/i;
 
 export type FactCheck = {
   dates: string[];
@@ -54,17 +66,25 @@ export function validateRender(text: string, payload: AnswerPayload): string[] {
  */
 export function validateLead(text: string, payload: AnswerPayload): string[] {
   const reasons: string[] = [];
-  const allowedDates = dateSet(payload);
   const allowedQuotes = new Set(payload.claims.flatMap((claim) => (claim.quote ? [claim.quote] : [])));
   const allowedNumbers = numberSet(payload);
+  const citedIds = new Set(payload.claims.flatMap((claim) => claim.message_ids));
   for (const date of text.match(DATE) ?? []) {
-    if (!allowedDates.has(date)) reasons.push(`date ${date} is not in the payload`);
+    reasons.push(`lead repeated the date ${date}`);
   }
   for (const span of quotedSpans(text)) {
     if (!allowedQuotes.has(span)) reasons.push("quoted text is not a payload quote");
   }
   for (const value of numberTokens(text)) {
-    if (!allowedNumbers.has(value)) reasons.push(`number ${value} is not in the payload`);
+    if (citedIds.has(value)) reasons.push(`lead repeated message id ${value}`);
+    else if (!allowedNumbers.has(value)) reasons.push(`number ${value} is not in the payload`);
+  }
+  if (unbalancedQuotes(text)) reasons.push("unbalanced quotation marks");
+  if (/\b(caveats?|confidence|verdict|message ids?|dates?|quotes?)\b|will follow|listed below|shown below/i.test(text)) {
+    reasons.push("lead narrated the appendix");
+  }
+  if (payload.verdict === "not_found" && /not_found|verdict\s*:/i.test(text)) {
+    reasons.push("not_found used a label");
   }
   reasons.push(...verdictReasons(text, payload));
   if (payload.sensitivity === "heavy" && SOFT_BAN.test(withoutPayloadQuotes(text, payload))) {
@@ -75,6 +95,13 @@ export function validateLead(text: string, payload: AnswerPayload): string[] {
   }
   if (text.length > 900) reasons.push("lead is too long");
   return reasons;
+}
+
+function unbalancedQuotes(text: string): boolean {
+  const straight = (text.match(/"/g) ?? []).length;
+  const open = (text.match(/“/g) ?? []).length;
+  const close = (text.match(/”/g) ?? []).length;
+  return straight % 2 === 1 || open !== close;
 }
 
 export function extractFacts(text: string, payload: AnswerPayload): FactCheck {
@@ -99,28 +126,28 @@ export function quotedSpans(text: string): string[] {
 
 function verdictReasons(text: string, payload: AnswerPayload): string[] {
   const reasons: string[] = [];
-  if (payload.verdict === "not_found" && !/not[_ ]found|nothing matched|nothing in the search|could not find|couldn't find|did not find|didn't find|no message/i.test(text)) {
+  if (payload.verdict === "not_found" && !NOT_FOUND.test(text)) {
     reasons.push("not_found was not said");
   }
   if (payload.verdict === "not_found" && /\b(at least|luckily|probably|maybe they|i bet)\b/i.test(text)) {
     reasons.push("not_found invented a consolation");
   }
   const ambiguous = payload.verdict === "ambiguous" || payload.confidence === "ambiguous";
-  if (ambiguous && !/\b(ambiguous|unclear|either|both|not certain|cannot tell|can't tell|too close)\b/i.test(text)) {
+  if (ambiguous && !AMBIGUOUS.test(text)) {
     reasons.push("ambiguous was phrased as settled");
   }
   if (ambiguous && /\b(definitely|certainly|without a doubt|no question|the one and only)\b/i.test(text)) {
     reasons.push("ambiguous was phrased as certain");
   }
-  if (payload.verdict === "partial" && !/\bpartial\b/i.test(text)) reasons.push("partial was not said");
+  if (payload.verdict === "partial" && !PARTIAL.test(text)) reasons.push("partial was not said");
   if (payload.verdict === "found" && readVerdict(text) !== "found") reasons.push("verdict was not kept");
   return reasons;
 }
 
 export function readVerdict(text: string): Verdict | null {
-  if (/not[_ ]found|nothing matched the search|nothing in the search/i.test(text)) return "not_found";
+  if (NOT_FOUND.test(text)) return "not_found";
   if (/\bambiguous\b/i.test(text)) return "ambiguous";
-  if (/\bpartial\b/i.test(text)) return "partial";
+  if (PARTIAL.test(text)) return "partial";
   if (/\bfound\b/i.test(text)) return "found";
   return null;
 }

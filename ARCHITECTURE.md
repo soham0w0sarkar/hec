@@ -190,7 +190,7 @@ Several words are matched as a phrase. If the phrase never occurs, the words are
 
 ### Personality
 
-The cheeky romance-novel-geek voice lives in `packages/persona` and only affects wording, never what gets searched. Tone can change without breaking accuracy.
+The warm, dry voice lives in `packages/persona` and only affects wording, never what gets searched. Tone can change without breaking accuracy.
 
 ### Which table answers which question
 

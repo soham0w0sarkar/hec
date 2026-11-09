@@ -1,5 +1,6 @@
 import { AnswerPayloadSchema, type AnswerPayload } from "@hec/core";
 import { ZERO_USAGE, type ChatModel, type Usage } from "@hec/llm";
+import { voiceFallbackText } from "./fallback";
 import { neutralText } from "./neutral";
 import { loadPersonaPrompt } from "./prompt";
 import { composeSpoken } from "./receipts";
@@ -17,6 +18,8 @@ export type Rendered = {
   mentioned_dates: string[];
   facts: FactCheck;
   usage: Usage;
+  /** Set when both model attempts failed the fact check and the voice fallback was used. */
+  fallbackReasons: string[] | null;
 };
 
 const romanceSystem = loadPersonaPrompt();
@@ -48,28 +51,33 @@ export async function render(
 
   const model = options.model;
   if (!model) throw new Error(`persona ${voice.id} needs a model`);
-  const first = await ask(model, voice, checked, null);
-  const firstLead = cleanLead(first.text);
+  const first = await askSafe(model, voice, checked, null);
+  if (!first.reply) {
+    return pack(voiceFallbackText(checked), checked, ZERO_USAGE, [first.error]);
+  }
+  const firstLead = cleanLead(first.reply.text);
   const firstSpoken = composeSpoken(firstLead, checked);
-  if (leadOk(firstLead, checked) && validateRender(firstSpoken, checked).length === 0) {
-    return pack(firstSpoken, checked, first.usage);
+  const firstReasons = reasonsFor(firstLead, firstSpoken, checked);
+  if (firstReasons.length === 0) {
+    return pack(firstSpoken, checked, first.reply.usage);
   }
 
-  const second = await ask(model, voice, checked, [
-    ...validateLead(firstLead, checked),
-    ...validateRender(firstSpoken, checked),
-  ]);
-  const usage = add(first.usage, second.usage);
-  const secondLead = cleanLead(second.text);
+  const second = await askSafe(model, voice, checked, firstReasons);
+  if (!second.reply) {
+    return pack(voiceFallbackText(checked), checked, first.reply.usage, [second.error]);
+  }
+  const usage = add(first.reply.usage, second.reply.usage);
+  const secondLead = cleanLead(second.reply.text);
   const secondSpoken = composeSpoken(secondLead, checked);
-  if (leadOk(secondLead, checked) && validateRender(secondSpoken, checked).length === 0) {
+  const secondReasons = reasonsFor(secondLead, secondSpoken, checked);
+  if (secondReasons.length === 0) {
     return pack(secondSpoken, checked, usage);
   }
-  return pack(plain, checked, usage);
+  return pack(voiceFallbackText(checked), checked, usage, secondReasons);
 }
 
-function leadOk(lead: string, payload: AnswerPayload): boolean {
-  return validateLead(lead, payload).length === 0;
+function reasonsFor(lead: string, spoken: string, payload: AnswerPayload): string[] {
+  return [...validateLead(lead, payload), ...validateRender(spoken, payload)];
 }
 
 /** Drops leaked prompt tags some models echo into the lead. */
@@ -80,12 +88,28 @@ export function cleanLead(text: string): string {
     .trim();
 }
 
+type Reply = { text: string; usage: Usage };
+
+async function askSafe(
+  model: ChatModel,
+  persona: Persona,
+  payload: AnswerPayload,
+  failures: string[] | null,
+): Promise<{ reply: Reply; error: null } | { reply: null; error: string }> {
+  try {
+    return { reply: await ask(model, persona, payload, failures), error: null };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "unknown error";
+    return { reply: null, error: `persona model failed: ${message}` };
+  }
+}
+
 async function ask(
   model: ChatModel,
   persona: Persona,
   payload: AnswerPayload,
   failures: string[] | null,
-): Promise<{ text: string; usage: Usage }> {
+): Promise<Reply> {
   const soft = payload.sensitivity === "heavy" ? "SOFT MODE is on. No jokes, no innuendo, no teasing." : "";
   const retry = failures ? `The previous reply failed these checks: ${failures.slice(0, 8).join("; ")}. Fix only that.` : "";
   const user = [
@@ -111,7 +135,12 @@ async function ask(
   return { text: reply.text.trim(), usage: reply.usage };
 }
 
-function pack(text: string, payload: AnswerPayload, usage: Usage): Rendered {
+function pack(
+  text: string,
+  payload: AnswerPayload,
+  usage: Usage,
+  fallbackReasons: string[] | null = null,
+): Rendered {
   const facts = extractFacts(text, payload);
   return {
     text,
@@ -119,6 +148,7 @@ function pack(text: string, payload: AnswerPayload, usage: Usage): Rendered {
     mentioned_dates: facts.dates,
     facts,
     usage,
+    fallbackReasons,
   };
 }
 

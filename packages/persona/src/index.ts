@@ -1,3 +1,4 @@
+export { fallbackLead, voiceFallbackText } from "./fallback";
 export { neutralText } from "./neutral";
 export { loadPersonaPrompt } from "./prompt";
 export { PERSONAS, personaByName, render } from "./render";

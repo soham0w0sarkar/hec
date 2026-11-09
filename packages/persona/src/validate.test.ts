@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { AnswerPayload } from "@hec/core";
 import { neutralText } from "./neutral";
-import { validateRender } from "./validate";
+import { validateLead, validateRender } from "./validate";
 
 function payload(over: Partial<AnswerPayload> = {}): AnswerPayload {
   return {
@@ -64,5 +64,70 @@ describe("validateRender", () => {
     const body = payload({ verdict: "not_found", claims: [], confidence: "low" });
     const text = "Nothing matched the search, but luckily they probably said it on a call.";
     expect(validateRender(text, body).length).toBeGreaterThan(0);
+  });
+
+  test("accepts natural ways of saying the search came back empty", () => {
+    const body = payload({ verdict: "not_found", claims: [], caveats: [], confidence: "low" });
+    for (const lead of [
+      "I couldn't find a record of that.",
+      "The search came up empty.",
+      "The search turned up empty.",
+      "There is no record of that in the story.",
+      "That one isn't there.",
+      "I don't have a message for that.",
+    ]) {
+      expect(validateRender(lead, body)).toEqual([]);
+    }
+  });
+
+  test("accepts a partial verdict said as 'only part'", () => {
+    const body = payload({ verdict: "partial", claims: [], caveats: [], confidence: "low" });
+    expect(validateRender("I only found part of it.", body)).toEqual([]);
+  });
+
+  test("accepts an ambiguous verdict said as 'don't agree'", () => {
+    const body = payload({ verdict: "ambiguous", claims: [], caveats: [], confidence: "ambiguous" });
+    expect(validateRender("The records don't agree.", body)).toEqual([]);
+  });
+
+  test("accepts a plain 'couldn't find it' lead", () => {
+    const body = payload({ verdict: "not_found", claims: [], caveats: [], confidence: "low" });
+    expect(validateLead("I checked and I couldn't find it.", body)).toEqual([]);
+  });
+
+  test("rejects an unbalanced quotation in the lead", () => {
+    const body = payload();
+    const reasons = validateLead('He was the first to say "hello there.', body);
+    expect(reasons.some((reason) => reason.includes("unbalanced"))).toBe(true);
+  });
+
+  test("rejects a date in the lead even when it is in the payload", () => {
+    const body = payload();
+    const reasons = validateLead("It happened on 2030-06-01.", body);
+    expect(reasons.some((reason) => reason.includes("repeated the date"))).toBe(true);
+  });
+
+  test("rejects a message id in the lead", () => {
+    const body = payload();
+    const reasons = validateLead("Message 7 says it.", body);
+    expect(reasons.some((reason) => reason.includes("repeated message id"))).toBe(true);
+  });
+
+  test("rejects a lead that narrates the appendix", () => {
+    const body = payload();
+    for (const lead of [
+      "Dates and message ids will follow below.",
+      "I'll leave the dates and quotes up to you.",
+      "Caveats and confidence are listed below.",
+    ]) {
+      const reasons = validateLead(lead, body);
+      expect(reasons.some((reason) => reason.includes("appendix"))).toBe(true);
+    }
+  });
+
+  test("rejects the literal not_found label in the lead", () => {
+    const body = payload({ verdict: "not_found", claims: [], caveats: [], confidence: "low" });
+    const reasons = validateLead("Not_found. I looked and couldn't find it.", body);
+    expect(reasons.some((reason) => reason.includes("label"))).toBe(true);
   });
 });
