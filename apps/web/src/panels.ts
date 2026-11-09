@@ -318,7 +318,7 @@ async function loadTimeline(list: HTMLElement): Promise<void> {
       bodyCard.className = "mile-body";
       const meta = document.createElement("div");
       meta.className = "meta";
-      for (const bit of [event.occurredAtIst.slice(0, 10), event.category]) {
+      for (const bit of [event.occurredAtIst.slice(0, 16), event.category]) {
         const chip = document.createElement("span");
         chip.textContent = bit;
         meta.append(chip);
