@@ -140,11 +140,11 @@ export function eventStatement(query: PreparedEvents): { sql: string; params: un
       e.date_precision, e.ended_at, e.significance, e.highlight, e.is_first, e.first_of,
       e.speaker_id, e.quote, e.status,
       coalesce((
-        select jsonb_agg(message_id order by message_id)
+        select jsonb_agg(message_id order by role, message_id)
         from (
-          select message_id from event_evidence
+          select message_id, role from event_evidence
           where event_id = e.id
-          order by message_id
+          order by role, message_id
           limit ${MAX_EVIDENCE_IDS}
         ) capped
       ), '[]'::jsonb) as evidence_ids,

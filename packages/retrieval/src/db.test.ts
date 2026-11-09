@@ -286,13 +286,20 @@ describeDb("retrieval against the local test database", () => {
       `) as { id: string | number; category: string }[];
       const conflict = inserted.find((row) => row.category === "Conflict");
       if (!conflict) throw new Error("conflict event is missing");
-      await sql`insert into event_evidence (event_id, message_id, role) values (${conflict.id}, ${messageId}, 'primary')`;
+      const other = (await sql`
+        select id from messages where id <> ${messageId} order by id asc limit 1
+      `) as { id: string | number }[];
+      const supportingId = other[0]?.id;
+      if (supportingId === undefined) throw new Error("second fixture message is missing");
+      await sql`insert into event_evidence (event_id, message_id, role) values
+        (${conflict.id}, ${messageId}, 'primary'),
+        (${conflict.id}, ${supportingId}, 'supporting')`;
 
       const page = await listEvents(sql, { limit: 2 });
       expect(page.events.map((event) => event.category)).toEqual(["Meetup", "Conflict"]);
       expect(page.events.map((event) => event.status)).toEqual(["approved", "approved"]);
       expect(page.events[0]?.occurredAtIst.startsWith("2030-06-01")).toBe(true);
-      expect(page.events[1]?.evidenceMessageIds).toEqual([Number(messageId)]);
+      expect(page.events[1]?.evidenceMessageIds).toEqual([Number(messageId), Number(supportingId)]);
       expect(page.next).not.toBeNull();
 
       const rest = await listEvents(sql, { limit: 2, after: page.next ?? undefined });
